@@ -1,0 +1,26 @@
+# Project TODO
+
+- [x] Analisar o mockup estratégico anexado e traduzir suas diretrizes para a experiência do backoffice.
+- [x] Modelar no banco os cadastros de parceiros, cupons e utilizações, com integridade entre os registros.
+- [x] Aplicar a migração de banco de dados para as entidades do MVP.
+- [x] Restringir todas as ações administrativas da API a usuários autenticados com papel de administrador.
+- [x] Criar procedimentos protegidos para listar, criar, editar e atualizar status de parceiros.
+- [x] Criar procedimentos protegidos para listar, criar, editar, ativar, pausar e encerrar cupons.
+- [x] Criar procedimento protegido para registrar utilização de cupom com validação de status, validade e limite disponível.
+- [x] Criar procedimentos protegidos para indicadores operacionais e listagens pesquisáveis com filtros.
+- [x] Adaptar o layout de dashboard para a identidade visual elegante da Pedágio Digital e a navegação do backoffice.
+- [x] Implementar painel operacional com métricas de parceiros, cupons ativos, vencimentos próximos e usos registrados.
+- [x] Implementar gestão de parceiros com busca, filtros, formulário de cadastro e edição de status.
+- [x] Implementar gestão de cupons com busca, filtros, formulário de criação/edição e controles de status.
+- [x] Implementar acompanhamento de utilizações e saldo operacional dos cupons.
+- [x] Implementar estados de carregamento, vazio, erro e confirmações para operações administrativas.
+- [x] Criar testes automatizados para as regras críticas de autorização e validação de utilização.
+- [x] Executar testes, verificação de tipos e validação visual do desktop e do celular.
+- [ ] Criar o checkpoint final do MVP e orientar o fluxo de publicação.
+- [x] Retornar erro explícito em consultas administrativas quando o banco de dados estiver indisponível.
+- [x] Diferenciar conflitos de negócio e falhas internas ao registrar utilizações de cupom.
+- [x] Expandir a listagem de utilizações com busca e filtro de período para acompanhamento operacional.
+- [x] Adicionar confirmação para pausar ou encerrar cupons e mensagens de erro consistentes nas mutações administrativas.
+- [x] Cobrir em testes as regras de status, vigência, limite e duplicidade de referência ao registrar utilizações.
+- [x] Corrigir o fluxo de alteração de status para confirmar apenas pausar e encerrar, mantendo a ativação imediata e clara.
+- [ ] Após o provisionamento de uma conta administrativa, validar visualmente as ações de ativar, pausar e encerrar cupons em sessão autenticada.
