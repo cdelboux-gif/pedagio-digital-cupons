@@ -237,7 +237,7 @@
 - [x] Definir ranking híbrido com elegibilidade obrigatória, relevância mínima e componente comercial limitado.
 - [x] Exibir identificação clara de conteúdo patrocinado e preservar o controle de opt-out.
 - [x] Registrar impressões, cliques, dispensas, ativações, resgates, custo e conversão por campanha.
-- [ ] Criar proteção contra abuso, sobreposição de campanhas, concentração em um parceiro e recomendação inelegível.
+- [x] Criar proteção contra abuso, sobreposição de campanhas, concentração em um parceiro e recomendação inelegível.
 - [ ] Definir conciliação comercial entre impressão, clique, ativação e resgate antes de cobrança.
 - [ ] Criar simulador de leilão e recomendações no backoffice sem impacto em usuários reais.
 - [ ] Testar privacidade, escopo, frequência, orçamento, latência e explicabilidade.

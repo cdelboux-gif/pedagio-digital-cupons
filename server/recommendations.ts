@@ -7,6 +7,8 @@ export type RecommendationContext = {
   consentPersonalization: boolean;
   usedCouponIds?: number[];
   preferredCategories?: string[];
+  campaignExposureCounts?: Record<number, number>;
+  excludedPartnerIds?: number[];
 };
 
 export type RankedRecommendation = {
@@ -34,6 +36,9 @@ function campaignIsEligible(candidate: Candidate, context: RecommendationContext
   if (now < new Date(coupon.startsAt) || now > new Date(coupon.endsAt)) return false;
   if (coupon.usageLimit > 0 && coupon.usageCount >= coupon.usageLimit) return false;
   if (campaign.mode === "personalized" && !context.consentPersonalization) return false;
+  if ((context.campaignExposureCounts?.[campaign.id] ?? 0) >= campaign.frequencyCap) return false;
+  if (context.excludedPartnerIds?.includes(campaign.partnerId)) return false;
+  if (campaign.budgetLimit !== null && Number(campaign.spentAmount) >= Number(campaign.budgetLimit)) return false;
   return true;
 }
 

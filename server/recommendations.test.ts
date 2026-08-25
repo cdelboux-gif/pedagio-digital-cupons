@@ -34,6 +34,15 @@ describe("recommendation engine", () => {
     expect(ranked[0]?.explanation).toBe("Patrocinado");
   });
 
+  it("blocks repeated exposure, exhausted budgets and excluded partners", () => {
+    const repeated = rankRecommendationCandidates([campaign()], { now, userReference: "user-1", tollPlazaId: 5, consentPersonalization: true, campaignExposureCounts: { 20: 1 } });
+    const exhausted = rankRecommendationCandidates([campaign({ budgetLimit: 10, spentAmount: "10" })], { now, userReference: "user-1", tollPlazaId: 5, consentPersonalization: true });
+    const excluded = rankRecommendationCandidates([campaign()], { now, userReference: "user-1", tollPlazaId: 5, consentPersonalization: true, excludedPartnerIds: [1] });
+    expect(repeated).toEqual([]);
+    expect(exhausted).toEqual([]);
+    expect(excluded).toEqual([]);
+  });
+
   it("builds a stable idempotency key per user, toll and minute", () => {
     const key = buildPassageIdempotencyKey("user-1", 5, now);
     expect(key).toBe("toll:user-1:5:2026-08-25T12:00");

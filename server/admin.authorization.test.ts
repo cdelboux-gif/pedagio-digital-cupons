@@ -48,6 +48,11 @@ describe("admin router authorization", () => {
     });
   });
 
+  it("blocks consulta users from simulating toll passage before database access", async () => {
+    const caller = appRouter.createCaller(createContext("user", "viewer"));
+    await expect(caller.admin.intelligence.simulatePassage({ userReference: "user-1", tollPlazaId: 1, occurredAt: new Date(), accuracyMeters: 80, consentPersonalization: true, source: "backoffice_simulator" })).rejects.toMatchObject<Partial<TRPCError>>({ code: "FORBIDDEN" });
+  });
+
   it("blocks a consulta user before management mutations", async () => {
     const caller = appRouter.createCaller(createContext("user", "viewer"));
 
