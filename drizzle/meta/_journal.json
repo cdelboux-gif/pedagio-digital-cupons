@@ -22,6 +22,13 @@
       "when": 1787663823316,
       "tag": "0002_fancy_sister_grimm",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1787682764110,
+      "tag": "0003_sturdy_omega_sentinel",
+      "breakpoints": true
     }
   ]
 }

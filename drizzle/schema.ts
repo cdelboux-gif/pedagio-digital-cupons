@@ -7,11 +7,19 @@ import {
   mysqlTable,
   text,
   timestamp,
+  uniqueIndex,
   varchar,
 } from "drizzle-orm/mysql-core";
 
 export const partnerStatusValues = ["prospect", "active", "inactive", "blocked"] as const;
 export const couponStatusValues = ["draft", "active", "paused", "ended"] as const;
+export const integrationEventValues = [
+  "coupon.created",
+  "coupon.published",
+  "coupon.activated",
+  "coupon.redeemed",
+] as const;
+export const integrationStatusValues = ["active", "paused"] as const;
 
 /** Core user table backing the Manus OAuth flow. */
 export const users = mysqlTable("users", {
@@ -83,6 +91,30 @@ export const coupons = mysqlTable(
   ],
 );
 
+export const partnerIntegrations = mysqlTable(
+  "partnerIntegrations",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    partnerId: int("partnerId")
+      .notNull()
+      .references(() => partners.id, { onDelete: "restrict" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    endpointUrl: varchar("endpointUrl", { length: 500 }).notNull(),
+    allowedEvents: text("allowedEvents").notNull(),
+    secretHash: varchar("secretHash", { length: 64 }).notNull(),
+    secretLastFour: varchar("secretLastFour", { length: 8 }).notNull(),
+    status: mysqlEnum("status", integrationStatusValues).default("active").notNull(),
+    createdByUserId: int("createdByUserId").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index("partner_integrations_partner_idx").on(table.partnerId),
+    index("partner_integrations_status_idx").on(table.status),
+    uniqueIndex("partner_integrations_partner_endpoint_uq").on(table.partnerId, table.endpointUrl),
+  ],
+);
+
 export const couponUses = mysqlTable(
   "couponUses",
   {
@@ -114,3 +146,4 @@ export type InsertUser = typeof users.$inferInsert;
 export type Partner = typeof partners.$inferSelect;
 export type Coupon = typeof coupons.$inferSelect;
 export type CouponUse = typeof couponUses.$inferSelect;
+export type PartnerIntegration = typeof partnerIntegrations.$inferSelect;

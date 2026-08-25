@@ -11,15 +11,20 @@ import {
   listCouponUses,
   listCoupons,
   listPartners,
+  listPartnerIntegrations,
+  createPartnerIntegration,
   registerCouponUse,
   updateCoupon,
   updateCouponStatus,
   updatePartner,
 } from "../db";
+import { integrationEventValues, integrationStatusValues } from "../../drizzle/schema";
 import { adminProcedure, router } from "../_core/trpc";
 
 const partnerStatus = z.enum(["prospect", "active", "inactive", "blocked"]);
 const couponStatus = z.enum(["draft", "active", "paused", "ended"]);
+const integrationEvent = z.enum(integrationEventValues);
+const integrationStatus = z.enum(integrationStatusValues);
 const nullableText = (max: number) => z.string().trim().max(max).nullable().optional();
 
 export const partnerInput = z
@@ -65,6 +70,14 @@ const couponInput = z
     message: "A validade final deve ser posterior ao início",
     path: ["endsAt"],
   });
+
+export const integrationInput = z.object({
+  partnerId: z.number().int().positive(),
+  name: z.string().trim().min(2, "Informe um nome para a integração").max(120),
+  endpointUrl: z.string().trim().url("Informe uma URL válida").max(500).refine(value => new URL(value).protocol === "https:", "O endpoint precisa usar HTTPS"),
+  allowedEvents: z.array(integrationEvent).min(1, "Autorize pelo menos um evento").max(integrationEventValues.length),
+  status: integrationStatus.default("active"),
+});
 
 function notFound(entity: string) {
   return new TRPCError({ code: "NOT_FOUND", message: `${entity} não encontrado(a)` });
@@ -116,6 +129,21 @@ export const adminRouter = router({
         if (!(await getCouponById(input.id))) throw notFound("Cupom");
         return updateCouponStatus(input.id, input.status);
       }),
+  }),
+
+  integrations: router({
+    list: adminProcedure.query(() => listPartnerIntegrations()),
+    create: adminProcedure.input(integrationInput).mutation(async ({ input, ctx }) => {
+      if (!(await getPartnerById(input.partnerId))) throw notFound("Parceiro");
+      try {
+        return await createPartnerIntegration({ ...input, createdByUserId: ctx.user.id });
+      } catch (error) {
+        if ((error as { code?: string }).code === "ER_DUP_ENTRY") {
+          throw new TRPCError({ code: "CONFLICT", message: "Este endpoint já está cadastrado para o parceiro" });
+        }
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar a integração" });
+      }
+    }),
   }),
 
   uses: router({

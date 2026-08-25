@@ -1,5 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
@@ -52,6 +55,13 @@ const events = [
   },
 ];
 
+const eventOptions = [
+  ["coupon.created", "Criação de cupom"],
+  ["coupon.published", "Publicação de cupom"],
+  ["coupon.activated", "Ativação de cupom"],
+  ["coupon.redeemed", "Resgate de cupom"],
+] as const;
+
 const envelope = `{
   "id": "evt_01JEXAMPLE",
   "event": "coupon.redeemed",
@@ -68,6 +78,70 @@ const envelope = `{
     "reference": "pedido-123"
   }
 }`;
+
+function IntegrationManager() {
+  const partnersQuery = trpc.admin.partners.list.useQuery({});
+  const integrationsQuery = trpc.admin.integrations.list.useQuery();
+  const utils = trpc.useUtils();
+  const createMutation = trpc.admin.integrations.create.useMutation({
+    onSuccess: result => {
+      setLastSecret(result.secret);
+      setName("");
+      setEndpointUrl("");
+      toast.success("Integração criada");
+      void utils.admin.integrations.list.invalidate();
+    },
+    onError: error => toast.error(error.message || "Não foi possível criar a integração"),
+  });
+  const [partnerId, setPartnerId] = useState("");
+  const [name, setName] = useState("");
+  const [endpointUrl, setEndpointUrl] = useState("");
+  const [status, setStatus] = useState<"active" | "paused">("active");
+  const [selectedEvents, setSelectedEvents] = useState<string[]>(eventOptions.map(([event]) => event));
+  const [lastSecret, setLastSecret] = useState<string | null>(null);
+
+  function toggleEvent(event: string) {
+    setSelectedEvents(current => current.includes(event) ? current.filter(item => item !== event) : [...current, event]);
+  }
+
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!partnerId || selectedEvents.length === 0) {
+      toast.error("Selecione o parceiro e pelo menos um evento");
+      return;
+    }
+    createMutation.mutate({
+      partnerId: Number(partnerId),
+      name,
+      endpointUrl,
+      allowedEvents: selectedEvents as (typeof eventOptions)[number][0][],
+      status,
+    });
+  }
+
+  return (
+    <section className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+      <Card className="border-0 shadow-sm shadow-black/[0.04]">
+        <CardHeader className="p-6 pb-4 sm:p-7 sm:pb-5"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Nova integração</p><CardTitle className="mt-2 text-xl tracking-tight">Conectar um parceiro</CardTitle><p className="mt-2 text-sm leading-6 text-muted-foreground">Cadastre o endpoint HTTPS e escolha os eventos que este parceiro poderá trocar.</p></CardHeader>
+        <CardContent className="p-6 pt-0 sm:p-7 sm:pt-0">
+          <form className="space-y-5" onSubmit={submit}>
+            <div className="space-y-2"><Label htmlFor="integration-partner">Parceiro</Label><select id="integration-partner" value={partnerId} onChange={event => setPartnerId(event.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"><option value="">Selecione um parceiro</option>{partnersQuery.data?.map(partner => <option key={partner.id} value={partner.id}>{partner.displayName}</option>)}</select></div>
+            <div className="space-y-2"><Label htmlFor="integration-name">Nome da integração</Label><Input id="integration-name" placeholder="Ex.: Plataforma do parceiro" value={name} onChange={event => setName(event.target.value)} required /></div>
+            <div className="space-y-2"><Label htmlFor="integration-endpoint">Endpoint HTTPS</Label><Input id="integration-endpoint" type="url" placeholder="https://parceiro.com/webhooks/cupons" value={endpointUrl} onChange={event => setEndpointUrl(event.target.value)} required /><p className="text-[11px] text-muted-foreground">Somente HTTPS é aceito para proteger os eventos em trânsito.</p></div>
+            <div className="space-y-2"><Label htmlFor="integration-status">Status inicial</Label><select id="integration-status" value={status} onChange={event => setStatus(event.target.value as "active" | "paused")} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"><option value="active">Ativa — pronta para homologação</option><option value="paused">Pausada — não utilizar ainda</option></select></div>
+            <div className="space-y-3"><div><Label>Eventos autorizados</Label><p className="mt-1 text-[11px] text-muted-foreground">O parceiro receberá ou poderá enviar apenas os eventos marcados.</p></div><div className="grid gap-2 sm:grid-cols-2">{eventOptions.map(([event, label]) => <label key={event} className="flex cursor-pointer items-center gap-3 rounded-xl border border-black/[0.06] p-3 transition-colors hover:bg-[#fbfbf8]"><input type="checkbox" checked={selectedEvents.includes(event)} onChange={() => toggleEvent(event)} className="h-4 w-4 accent-[#e7c900]" /><span><span className="block font-mono text-xs font-bold">{event}</span><span className="mt-1 block text-[11px] text-muted-foreground">{label}</span></span></label>)}</div></div>
+            <Button type="submit" className="h-11 w-full gap-2 font-bold" disabled={createMutation.isPending}><KeyRound className="h-4 w-4" />{createMutation.isPending ? "Gerando segredo…" : "Criar integração e gerar segredo"}</Button>
+          </form>
+          {lastSecret && <div className="mt-5 rounded-2xl border border-[#e6cf32] bg-[#fffbea] p-4"><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#806b00]" /><div className="min-w-0 flex-1"><p className="text-xs font-bold text-[#5f5100]">Segredo gerado — copie agora</p><p className="mt-1 text-[11px] leading-5 text-[#806b00]">Ele não será mostrado novamente depois que você sair desta tela.</p><div className="mt-3 flex gap-2"><code className="min-w-0 flex-1 overflow-x-auto rounded-lg bg-white px-3 py-2 font-mono text-xs text-foreground">{lastSecret}</code><Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => { void navigator.clipboard?.writeText(lastSecret); toast.success("Segredo copiado"); }}>Copiar</Button></div></div></div></div>}
+        </CardContent>
+      </Card>
+      <Card className="border-0 shadow-sm shadow-black/[0.04]">
+        <CardHeader className="flex flex-row items-start justify-between gap-3 p-6 pb-4 sm:p-7 sm:pb-5"><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Integrações cadastradas</p><CardTitle className="mt-2 text-xl tracking-tight">Parceiros conectados</CardTitle></div><Badge className="border-0 bg-[#e2f7eb] text-[#16734b] hover:bg-[#e2f7eb]">{integrationsQuery.data?.length ?? 0} integrações</Badge></CardHeader>
+        <CardContent className="space-y-3 p-6 pt-0 sm:p-7 sm:pt-0">{integrationsQuery.data?.length ? integrationsQuery.data.map(integration => <div key={integration.id} className="rounded-2xl border border-black/[0.06] p-4"><div className="flex items-start gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f1e8ff] text-[#7440ab]"><Webhook className="h-4 w-4" /></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{integration.name}</p><Badge variant="outline" className="text-[10px]">{integration.status === "active" ? "Ativa" : "Pausada"}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{integration.partnerName}</p><p className="mt-2 truncate font-mono text-[11px] text-muted-foreground">{integration.endpointUrl}</p><div className="mt-3 flex flex-wrap gap-1.5">{integration.allowedEvents.map(event => <span key={event} className="rounded-md bg-[#f7f7f3] px-2 py-1 font-mono text-[10px] text-muted-foreground">{event.replace("coupon.", "")}</span>)}</div></div></div><div className="mt-3 flex items-center justify-between border-t border-black/[0.05] pt-3 text-[11px] text-muted-foreground"><span>Segredo termina em <strong className="font-mono text-foreground">••••{integration.secretLastFour}</strong></span><span className="flex items-center gap-1"><LockKeyhole className="h-3 w-3" /> Não exibido</span></div></div>) : <div className="rounded-2xl border border-dashed border-black/10 p-7 text-center"><Webhook className="mx-auto h-7 w-7 text-muted-foreground/50" /><p className="mt-3 text-sm font-semibold">Nenhuma integração cadastrada</p><p className="mt-1 text-xs text-muted-foreground">A primeira integração aparecerá aqui após a criação.</p></div>}</CardContent>
+      </Card>
+    </section>
+  );
+}
 
 export default function Integrations() {
   const [copied, setCopied] = useState(false);
@@ -116,6 +190,8 @@ export default function Integrations() {
           ))}
         </div>
       </section>
+
+      <IntegrationManager />
 
       <section className="grid gap-5 lg:grid-cols-[1.3fr_0.7fr]">
         <Card className="overflow-hidden border-0 shadow-sm shadow-black/[0.04]">

@@ -75,3 +75,19 @@
 
 - [x] Validar `/integracoes` em viewport móvel no domínio publicado com sessão autenticada de administrador, conforme confirmação do usuário.
 - [x] Atualizar as notas separando a evidência técnica de desktop autenticado da confirmação de uso mobile fornecida pelo usuário.
+
+
+## Integrações por parceiro
+
+- [x] Modelar integrações por parceiro com endpoint, eventos autorizados, status e segredo armazenado com segurança.
+- [x] Aplicar migração de banco para integrações e índice de unicidade por parceiro e endpoint.
+- [x] Criar APIs administrativas protegidas para listar e cadastrar integrações.
+- [x] Gerar segredo individual criptograficamente seguro e exibi-lo somente uma vez após a criação.
+- [x] Implementar tela de cadastro por parceiro com endpoint, seleção de eventos e status.
+- [x] Exibir integrações existentes sem revelar segredos persistidos.
+- [x] Testar autorização, endpoint HTTPS, eventos autorizados e não exposição do segredo.
+- [x] Validar a tela em desktop e mobile.
+
+- [x] Adicionar ao formulário de integração o status inicial ativa/pausada e persistir a escolha.
+- [x] Criar testes específicos de autorização admin e de não exposição de `secretHash` ou segredo em claro nas respostas.
+- [ ] Publicar a extensão de integrações no próximo checkpoint.

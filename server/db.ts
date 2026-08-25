@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "node:crypto";
 import {
   and,
   count,
@@ -16,6 +17,8 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   couponUses,
   coupons,
+  integrationEventValues,
+  partnerIntegrations,
   type InsertUser,
   partners,
   users,
@@ -182,6 +185,77 @@ export async function updatePartner(id: number, input: PartnerInput) {
   const db = await requireDb();
   await db.update(partners).set(input).where(eq(partners.id, id));
   return getPartnerById(id);
+}
+
+type PartnerIntegrationInput = {
+  partnerId: number;
+  name: string;
+  endpointUrl: string;
+  allowedEvents: (typeof integrationEventValues)[number][];
+  status: "active" | "paused";
+  createdByUserId: number;
+};
+
+export function createIntegrationSecret() {
+  return `pd_wh_${randomBytes(32).toString("base64url")}`;
+}
+
+export function hashIntegrationSecret(secret: string) {
+  return createHash("sha256").update(secret).digest("hex");
+}
+
+export function publicIntegration(row: typeof partnerIntegrations.$inferSelect) {
+  return {
+    id: row.id,
+    partnerId: row.partnerId,
+    name: row.name,
+    endpointUrl: row.endpointUrl,
+    allowedEvents: JSON.parse(row.allowedEvents) as string[],
+    status: row.status,
+    secretLastFour: row.secretLastFour,
+    createdByUserId: row.createdByUserId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export async function listPartnerIntegrations() {
+  const db = await requireDb();
+  const rows = await db
+    .select({ integration: partnerIntegrations, partnerName: partners.displayName })
+    .from(partnerIntegrations)
+    .innerJoin(partners, eq(partners.id, partnerIntegrations.partnerId))
+    .orderBy(desc(partnerIntegrations.updatedAt));
+
+  return rows.map(({ integration, partnerName }) => ({
+    ...publicIntegration(integration),
+    partnerName,
+  }));
+}
+
+export async function createPartnerIntegration(input: PartnerIntegrationInput) {
+  const db = await requireDb();
+  const secret = createIntegrationSecret();
+  const secretHash = hashIntegrationSecret(secret);
+  const result = await db.insert(partnerIntegrations).values({
+    partnerId: input.partnerId,
+    name: input.name,
+    endpointUrl: input.endpointUrl,
+    allowedEvents: JSON.stringify(input.allowedEvents),
+    secretHash,
+    secretLastFour: secret.slice(-4),
+    status: input.status,
+    createdByUserId: input.createdByUserId,
+  });
+  const rows = await db
+    .select({ integration: partnerIntegrations, partnerName: partners.displayName })
+    .from(partnerIntegrations)
+    .innerJoin(partners, eq(partners.id, partnerIntegrations.partnerId))
+    .where(eq(partnerIntegrations.id, Number(result[0].insertId)))
+    .limit(1);
+  const created = rows[0];
+  if (!created) throw new DatabaseUnavailableError();
+  return { integration: { ...publicIntegration(created.integration), partnerName: created.partnerName }, secret };
 }
 
 export async function listCoupons(filters: {
