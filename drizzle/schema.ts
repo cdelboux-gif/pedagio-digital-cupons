@@ -24,6 +24,7 @@ export const tollPlazaStatusValues = ["active", "inactive"] as const;
 export const recommendationModeValues = ["activated_benefit", "personalized", "sponsored"] as const;
 export const recommendationCampaignStatusValues = ["draft", "active", "paused", "ended"] as const;
 export const recommendationDeliveryStatusValues = ["prepared", "shown", "activated", "redeemed", "dismissed", "expired"] as const;
+export const recommendationInteractionValues = ["impression", "click", "dismiss", "activate", "redeem"] as const;
 export const accessLevelValues = ["admin", "manager", "operator", "viewer"] as const;
 export const entityStatusValues = ["active", "inactive"] as const;
 export const storeStatusValues = ["active", "inactive"] as const;
@@ -414,6 +415,27 @@ export const recommendationDeliveries = mysqlTable(
   ],
 );
 
+export const recommendationInteractions = mysqlTable(
+  "recommendationInteractions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    idempotencyKey: varchar("idempotencyKey", { length: 180 }).notNull().unique(),
+    deliveryId: int("deliveryId").notNull().references(() => recommendationDeliveries.id, { onDelete: "restrict" }),
+    campaignId: int("campaignId").notNull().references(() => recommendationCampaigns.id, { onDelete: "restrict" }),
+    userReference: varchar("userReference", { length: 160 }).notNull(),
+    eventName: mysqlEnum("eventName", recommendationInteractionValues).notNull(),
+    costAmount: decimal("costAmount", { precision: 12, scale: 4 }),
+    eventAt: datetime("eventAt").notNull(),
+    isSimulation: int("isSimulation").default(0).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [
+    index("recommendation_interactions_delivery_idx").on(table.deliveryId, table.eventName),
+    index("recommendation_interactions_campaign_idx").on(table.campaignId, table.eventName, table.eventAt),
+    index("recommendation_interactions_user_idx").on(table.userReference, table.eventAt),
+  ],
+);
+
 export const emailOutbox = mysqlTable(
   "emailOutbox",
   {
@@ -461,3 +483,4 @@ export type TollPlaza = typeof tollPlazas.$inferSelect;
 export type RecommendationCampaign = typeof recommendationCampaigns.$inferSelect;
 export type TollPassageEvent = typeof tollPassageEvents.$inferSelect;
 export type RecommendationDelivery = typeof recommendationDeliveries.$inferSelect;
+export type RecommendationInteraction = typeof recommendationInteractions.$inferSelect;

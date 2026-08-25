@@ -69,6 +69,9 @@ import {
   listRecommendationCandidatesForToll,
   createRecommendationDelivery,
   listPreparedRecommendationDeliveries,
+  getRecommendationDeliveryById,
+  recordRecommendationInteraction,
+  listRecommendationMetrics,
 } from "../db";
 import { accessLevelValues, entityStatusValues, integrationEventValues, integrationStatusValues, storeStatusValues } from "../../drizzle/schema";
 import { moduleProcedure, router, superAdminProcedure } from "../_core/trpc";
@@ -203,6 +206,8 @@ const recommendationCampaignInput = z.object({
   frequencyCap: z.number().int().min(1).max(100),
   status: z.enum(recommendationCampaignStatusValues),
 }).refine(value => value.endsAt > value.startsAt, { message: "A campanha deve terminar depois de começar", path: ["endsAt"] });
+
+const recommendationInteraction = z.enum(["impression", "click", "dismiss", "activate", "redeem"] as const);
 
 const tollPassageInput = z.object({
   userReference: z.string().trim().min(2).max(160),
@@ -618,6 +623,23 @@ export const adminRouter = router({
       }
       await audit(ctx, { action: "simulate", resourceType: "coupon", resourceId: recommendations[0]?.couponId ?? null, resourceLabel: `Passagem ${plaza.name}`, after: { event: event.row, recommendations }, scope: scopeOf(ctx.user) });
       return { event: event.row, created: true, recommendations };
+    }),
+    metrics: moduleProcedure("intelligence", "read").input(z.object({ campaignId: z.number().int().positive().optional() }).optional()).query(({ input }) => listRecommendationMetrics(input?.campaignId)),
+    trackInteraction: moduleProcedure("intelligence", "manage").input(z.object({ deliveryId: z.number().int().positive(), eventName: recommendationInteraction, eventAt: z.coerce.date(), costAmount: z.number().nonnegative().nullable().optional() })).mutation(async ({ input, ctx }) => {
+      const delivery = await getRecommendationDeliveryById(input.deliveryId);
+      if (!delivery) throw notFound("Recomendação");
+      const result = await recordRecommendationInteraction({
+        idempotencyKey: `interaction:${delivery.id}:${input.eventName}:${input.eventAt.toISOString().slice(0, 19)}`,
+        deliveryId: delivery.id,
+        campaignId: delivery.campaignId,
+        userReference: delivery.userReference,
+        eventName: input.eventName,
+        costAmount: input.costAmount == null ? null : input.costAmount.toFixed(4),
+        eventAt: input.eventAt,
+        isSimulation: delivery.isSimulation,
+      });
+      if (result.row) await audit(ctx, { action: "simulate", resourceType: "coupon", resourceId: delivery.couponId, resourceLabel: `Interação ${input.eventName}`, after: result.row, scope: scopeOf(ctx.user) });
+      return result;
     }),
   }),
 

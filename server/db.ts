@@ -33,10 +33,12 @@ import {
   recommendationCampaigns,
   tollPassageEvents,
   recommendationDeliveries,
+  recommendationInteractions,
   type TollPlaza,
   type RecommendationCampaign,
   type TollPassageEvent,
   type RecommendationDelivery,
+  type RecommendationInteraction,
   type InsertUser,
   partners,
   type PartnerStore,
@@ -1113,6 +1115,12 @@ export async function recordTollPassageEvent(input: Pick<TollPassageEvent, "idem
   }
 }
 
+export async function getRecommendationDeliveryById(id: number) {
+  const db = await requireDb();
+  const rows = await db.select().from(recommendationDeliveries).where(eq(recommendationDeliveries.id, id)).limit(1);
+  return rows[0];
+}
+
 export async function listPreparedRecommendationDeliveries(userReference: string, passageEventId: number) {
   const db = await requireDb();
   return db.select().from(recommendationDeliveries).where(and(eq(recommendationDeliveries.userReference, userReference), eq(recommendationDeliveries.passageEventId, passageEventId), eq(recommendationDeliveries.isSimulation, 1))).orderBy(desc(recommendationDeliveries.score));
@@ -1129,6 +1137,25 @@ export async function createRecommendationDelivery(input: Pick<RecommendationDel
     const rows = await db.select().from(recommendationDeliveries).where(eq(recommendationDeliveries.idempotencyKey, input.idempotencyKey)).limit(1);
     return { created: false, row: rows[0] };
   }
+}
+
+export async function recordRecommendationInteraction(input: Pick<RecommendationInteraction, "idempotencyKey" | "deliveryId" | "campaignId" | "userReference" | "eventName" | "costAmount" | "eventAt" | "isSimulation">) {
+  const db = await requireDb();
+  try {
+    const result = await db.insert(recommendationInteractions).values(input);
+    const rows = await db.select().from(recommendationInteractions).where(eq(recommendationInteractions.id, Number(result[0].insertId))).limit(1);
+    return { created: true, row: rows[0] };
+  } catch (error) {
+    if ((error as { code?: string }).code !== "ER_DUP_ENTRY") throw error;
+    const rows = await db.select().from(recommendationInteractions).where(eq(recommendationInteractions.idempotencyKey, input.idempotencyKey)).limit(1);
+    return { created: false, row: rows[0] };
+  }
+}
+
+export async function listRecommendationMetrics(campaignId?: number) {
+  const db = await requireDb();
+  const rows = await db.select({ eventName: recommendationInteractions.eventName, total: count(recommendationInteractions.id) }).from(recommendationInteractions).where(campaignId ? and(eq(recommendationInteractions.campaignId, campaignId), eq(recommendationInteractions.isSimulation, 0)) : eq(recommendationInteractions.isSimulation, 0)).groupBy(recommendationInteractions.eventName);
+  return rows;
 }
 
 export async function retryEmailOutbox(id: number) {

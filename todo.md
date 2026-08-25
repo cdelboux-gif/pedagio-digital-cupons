@@ -236,7 +236,7 @@
 - [x] Definir campanha patrocinada com orçamento, período, lance, região, público e frequência máxima.
 - [x] Definir ranking híbrido com elegibilidade obrigatória, relevância mínima e componente comercial limitado.
 - [x] Exibir identificação clara de conteúdo patrocinado e preservar o controle de opt-out.
-- [ ] Registrar impressões, cliques, dispensas, ativações, resgates, custo e conversão por campanha.
+- [x] Registrar impressões, cliques, dispensas, ativações, resgates, custo e conversão por campanha.
 - [ ] Criar proteção contra abuso, sobreposição de campanhas, concentração em um parceiro e recomendação inelegível.
 - [ ] Definir conciliação comercial entre impressão, clique, ativação e resgate antes de cobrança.
 - [ ] Criar simulador de leilão e recomendações no backoffice sem impacto em usuários reais.
