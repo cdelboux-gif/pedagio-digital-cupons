@@ -61,10 +61,20 @@ import {
   simulateEmailOutbox,
   retryEmailOutbox,
   enqueueEmailRules,
+  listTollPlazas,
+  createTollPlaza,
+  listRecommendationCampaigns,
+  createRecommendationCampaign,
+  recordTollPassageEvent,
+  listRecommendationCandidatesForToll,
+  createRecommendationDelivery,
+  listPreparedRecommendationDeliveries,
 } from "../db";
 import { accessLevelValues, entityStatusValues, integrationEventValues, integrationStatusValues, storeStatusValues } from "../../drizzle/schema";
 import { moduleProcedure, router, superAdminProcedure } from "../_core/trpc";
 import { emailEventValues, validateEmailTemplate, renderEmail, renderEmailText, type EmailCondition, type EmailVariables } from "../email";
+import { recommendationModeValues, recommendationCampaignStatusValues, tollPlazaStatusValues } from "../../drizzle/schema";
+import { buildPassageIdempotencyKey, rankRecommendationCandidates } from "../recommendations";
 
 const partnerStatus = z.enum(["prospect", "active", "inactive", "blocked"]);
 const couponStatus = z.enum(["draft", "active", "paused", "ended"]);
@@ -167,6 +177,42 @@ const storeInput = z.object({
   latitude: z.number().min(-90).max(90).nullable().optional(),
   longitude: z.number().min(-180).max(180).nullable().optional(),
 }).refine(value => (value.latitude == null) === (value.longitude == null), { message: "Informe latitude e longitude juntas", path: ["latitude"] });
+
+const tollPlazaInput = z.object({
+  code: z.string().trim().min(2).max(80).transform(value => value.toUpperCase()),
+  name: z.string().trim().min(2).max(160),
+  highway: nullableText(80),
+  direction: nullableText(80),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  radiusMeters: z.number().int().min(50).max(2000),
+  status: z.enum(tollPlazaStatusValues),
+});
+
+const recommendationCampaignInput = z.object({
+  partnerId: z.number().int().positive(),
+  couponId: z.number().int().positive(),
+  tollPlazaId: nullableId,
+  name: z.string().trim().min(2).max(160),
+  mode: z.enum(recommendationModeValues),
+  sponsorshipLabel: nullableText(80),
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
+  budgetLimit: z.number().nonnegative().nullable().optional(),
+  bidAmount: z.number().nonnegative().nullable().optional(),
+  frequencyCap: z.number().int().min(1).max(100),
+  status: z.enum(recommendationCampaignStatusValues),
+}).refine(value => value.endsAt > value.startsAt, { message: "A campanha deve terminar depois de começar", path: ["endsAt"] });
+
+const tollPassageInput = z.object({
+  userReference: z.string().trim().min(2).max(160),
+  tollPlazaId: z.number().int().positive(),
+  occurredAt: z.coerce.date(),
+  accuracyMeters: z.number().int().min(1).max(5000).nullable().optional(),
+  consentPersonalization: z.boolean(),
+  source: z.enum(["app_geofence", "partner_feed", "backoffice_simulator"]),
+  payload: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
+});
 
 const userAccessInput = z.object({
   accessLevel,
@@ -499,6 +545,79 @@ export const adminRouter = router({
         for (const item of queued) if (item.row) await audit(ctx, { action: "create", resourceType: "email_outbox", resourceId: item.row.id, resourceLabel: item.row.recipientEmail, after: item.row });
         return queued.map(item => item.row).filter(Boolean);
       }),
+    }),
+  }),
+
+  tolls: router({
+    list: moduleProcedure("intelligence", "read").query(() => listTollPlazas()),
+    create: moduleProcedure("intelligence", "create").input(tollPlazaInput).mutation(async ({ input, ctx }) => {
+      const plaza = await createTollPlaza({ ...input, highway: input.highway ?? null, direction: input.direction ?? null });
+      if (!plaza) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar o pedágio" });
+      return plaza;
+    }),
+  }),
+
+  intelligence: router({
+    campaigns: router({
+      list: moduleProcedure("intelligence", "read").query(async ({ ctx }) => {
+        const rows = await listRecommendationCampaigns();
+        const visible = await Promise.all(rows.map(async row => (await isPartnerInScope(row.partnerId, scopeOf(ctx.user), false) ? row : null)));
+        return visible.filter((row): row is NonNullable<typeof row> => Boolean(row));
+      }),
+      create: moduleProcedure("intelligence", "create").input(recommendationCampaignInput).mutation(async ({ input, ctx }) => {
+        const partner = await getPartnerById(input.partnerId);
+        const coupon = await getCouponById(input.couponId);
+        if (!partner || !coupon) throw notFound("Parceiro ou cupom");
+        if (!(await isPartnerInScope(input.partnerId, scopeOf(ctx.user), true))) throw forbiddenScope();
+        if (!(await isCouponInScope(input.couponId, scopeOf(ctx.user), true))) throw forbiddenScope();
+        if (coupon.partnerId !== input.partnerId) throw new TRPCError({ code: "BAD_REQUEST", message: "O cupom precisa pertencer ao parceiro" });
+        const campaign = await createRecommendationCampaign({ ...input, tollPlazaId: input.tollPlazaId ?? null, sponsorshipLabel: input.sponsorshipLabel ?? null, budgetLimit: input.budgetLimit ?? null, bidAmount: input.bidAmount == null ? null : input.bidAmount.toFixed(4), createdByUserId: ctx.user.id });
+        if (!campaign) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar a campanha" });
+        return campaign;
+      }),
+    }),
+    simulatePassage: moduleProcedure("intelligence", "manage").input(tollPassageInput).mutation(async ({ input, ctx }) => {
+      const plaza = (await listTollPlazas()).find(row => row.id === input.tollPlazaId && row.status === "active");
+      if (!plaza) throw notFound("Pedágio ativo");
+      const eventKey = buildPassageIdempotencyKey(input.userReference, input.tollPlazaId, input.occurredAt);
+      const event = await recordTollPassageEvent({
+        idempotencyKey: eventKey,
+        userReference: input.userReference,
+        tollPlazaId: input.tollPlazaId,
+        occurredAt: input.occurredAt,
+        accuracyMeters: input.accuracyMeters ?? null,
+        consentPersonalization: input.consentPersonalization ? 1 : 0,
+        source: input.source,
+        payloadJson: input.payload ? JSON.stringify(input.payload) : null,
+        isSimulation: 1,
+      });
+      if (!event.row) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível registrar a passagem" });
+      if (!event.created) return { event: event.row, created: false, recommendations: await listPreparedRecommendationDeliveries(input.userReference, event.row.id) };
+      const candidates = await listRecommendationCandidatesForToll(input.tollPlazaId);
+      const ranked = rankRecommendationCandidates(candidates, {
+        now: input.occurredAt,
+        userReference: input.userReference,
+        tollPlazaId: input.tollPlazaId,
+        consentPersonalization: input.consentPersonalization,
+      }).slice(0, 10);
+      const recommendations = [];
+      for (const item of ranked) {
+        const saved = await createRecommendationDelivery({
+          idempotencyKey: `delivery:${event.row.id}:${item.campaignId}:${input.userReference}`,
+          passageEventId: event.row.id,
+          campaignId: item.campaignId,
+          couponId: item.couponId,
+          userReference: input.userReference,
+          mode: item.mode,
+          score: item.score,
+          explanation: item.explanation,
+          status: "prepared",
+          isSimulation: 1,
+        });
+        if (saved.row) recommendations.push(saved.row);
+      }
+      await audit(ctx, { action: "simulate", resourceType: "coupon", resourceId: recommendations[0]?.couponId ?? null, resourceLabel: `Passagem ${plaza.name}`, after: { event: event.row, recommendations }, scope: scopeOf(ctx.user) });
+      return { event: event.row, created: true, recommendations };
     }),
   }),
 

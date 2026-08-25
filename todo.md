@@ -196,17 +196,17 @@
 
 ## Nova expansão: Inteligência de negócio com IA
 
-- [ ] Definir objetivos do módulo de recomendação preditiva para cupons e benefícios.
-- [ ] Mapear sinais disponíveis de usuário, viagem, parceiro, loja, cupom, resgate e contexto rodoviário.
-- [ ] Definir estratégia inicial híbrida: regras de negócio, popularidade contextual e personalização progressiva.
-- [ ] Projetar score de recomendação com validade, margem, distância, afinidade, disponibilidade e risco de abuso.
-- [ ] Definir explicações exibíveis ao usuário e ao backoffice para cada recomendação.
-- [ ] Definir governança de dados, consentimento, minimização, anonimização e limites de uso da IA.
+- [x] Definir objetivos do módulo de recomendação preditiva para cupons e benefícios.
+- [x] Mapear sinais disponíveis de usuário, viagem, parceiro, loja, cupom, resgate e contexto rodoviário.
+- [x] Definir estratégia inicial híbrida: regras de negócio, popularidade contextual e personalização progressiva.
+- [x] Projetar score de recomendação com validade, margem, distância, afinidade, disponibilidade e risco de abuso.
+- [x] Definir explicações exibíveis ao usuário e ao backoffice para cada recomendação.
+- [x] Definir governança de dados, consentimento, minimização, anonimização e limites de uso da IA.
 - [ ] Criar módulo de insights no backoffice para acompanhar oportunidades por parceiro, loja, região e período.
-- [ ] Criar API protegida para recomendações e simulação de cenários sem alterar dados reais.
+- [x] Criar API protegida para recomendações e simulação de cenários sem alterar dados reais.
 - [ ] Integrar o módulo ao app da Pedágio Digital com contrato versionado, inicialmente em modo assistido.
 - [ ] Implementar testes de score, elegibilidade, escopo, explicabilidade, cold start e segurança.
-- [ ] Validar visualmente o módulo no desktop e mobile e publicar a primeira versão assistida.
+- [x] Validar visualmente o módulo no desktop e mobile e publicar a primeira versão assistida.
 - [ ] Planejar evolução para experimentos A/B, feedback explícito e marketplace Road Commerce.
 
 ## Apresentação: IA para cupons e benefícios
@@ -219,25 +219,27 @@
 
 ## Nova expansão: recomendações acionadas por passagem em pedágio
 
-- [ ] Modelar pedágios e pontos de interesse como gatilhos geográficos versionados.
-- [ ] Definir contrato de evento `toll.passed` com idempotência, timestamp, precisão e consentimento.
-- [ ] Definir janela de ativação e regras para evitar disparos repetidos em uma mesma passagem.
+- [x] Modelar pedágios e pontos de interesse como gatilhos geográficos versionados.
+- [x] Definir contrato de evento `toll.passed` com idempotência, timestamp, precisão e consentimento.
+- [x] Definir janela de ativação e regras para evitar disparos repetidos em uma mesma passagem.
 - [ ] Pré-calcular recomendações por região/rota e associá-las a segmentos de jornada.
 - [ ] Criar fluxo de entrega de recomendações no app após confirmação do evento.
 - [ ] Implementar fallback offline/cacheado e resposta determinística em caso de indisponibilidade da IA.
-- [ ] Criar simulador protegido no backoffice para testar passagem por pedágio sem afetar usuários reais.
+- [x] Criar simulador protegido no backoffice para testar passagem por pedágio sem afetar usuários reais.
 - [ ] Registrar auditoria, métricas e explicação de cada recomendação disparada.
 - [ ] Testar escopo, consentimento, geofencing, idempotência, latência e cold start.
 
 ## Expansão: ativação de benefícios e recomendações patrocinadas
 
-- [ ] Separar o produto em benefício ativado por evento e recomendação opcional patrocinada.
-- [ ] Modelar categorias contextuais iniciais: alimentação, combustível e serviços.
-- [ ] Definir campanha patrocinada com orçamento, período, lance, região, público e frequência máxima.
-- [ ] Definir ranking híbrido com elegibilidade obrigatória, relevância mínima e componente comercial limitado.
-- [ ] Exibir identificação clara de conteúdo patrocinado e preservar o controle de opt-out.
+- [x] Separar o produto em benefício ativado por evento e recomendação opcional patrocinada.
+- [x] Modelar categorias contextuais iniciais: alimentação, combustível e serviços.
+- [x] Definir campanha patrocinada com orçamento, período, lance, região, público e frequência máxima.
+- [x] Definir ranking híbrido com elegibilidade obrigatória, relevância mínima e componente comercial limitado.
+- [x] Exibir identificação clara de conteúdo patrocinado e preservar o controle de opt-out.
 - [ ] Registrar impressões, cliques, dispensas, ativações, resgates, custo e conversão por campanha.
 - [ ] Criar proteção contra abuso, sobreposição de campanhas, concentração em um parceiro e recomendação inelegível.
 - [ ] Definir conciliação comercial entre impressão, clique, ativação e resgate antes de cobrança.
 - [ ] Criar simulador de leilão e recomendações no backoffice sem impacto em usuários reais.
 - [ ] Testar privacidade, escopo, frequência, orçamento, latência e explicabilidade.
+- [x] Isolar simulações de recomendações das tabelas operacionais ou marcar/segregar claramente seus registros.
+- [ ] Adicionar testes tRPC de autorização e simulação sem impacto em cupons, utilizações, campanhas reais ou métricas finais.

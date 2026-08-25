@@ -20,6 +20,10 @@ export const integrationEventValues = [
   "coupon.redeemed",
 ] as const;
 export const integrationStatusValues = ["active", "paused"] as const;
+export const tollPlazaStatusValues = ["active", "inactive"] as const;
+export const recommendationModeValues = ["activated_benefit", "personalized", "sponsored"] as const;
+export const recommendationCampaignStatusValues = ["draft", "active", "paused", "ended"] as const;
+export const recommendationDeliveryStatusValues = ["prepared", "shown", "activated", "redeemed", "dismissed", "expired"] as const;
 export const accessLevelValues = ["admin", "manager", "operator", "viewer"] as const;
 export const entityStatusValues = ["active", "inactive"] as const;
 export const storeStatusValues = ["active", "inactive"] as const;
@@ -318,6 +322,98 @@ export const emailRules = mysqlTable(
   ],
 );
 
+export const tollPlazas = mysqlTable(
+  "tollPlazas",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    code: varchar("code", { length: 80 }).notNull().unique(),
+    name: varchar("name", { length: 160 }).notNull(),
+    highway: varchar("highway", { length: 80 }),
+    direction: varchar("direction", { length: 80 }),
+    latitude: decimal("latitude", { precision: 10, scale: 7, mode: "number" }).notNull(),
+    longitude: decimal("longitude", { precision: 10, scale: 7, mode: "number" }).notNull(),
+    radiusMeters: int("radiusMeters").default(250).notNull(),
+    status: mysqlEnum("status", tollPlazaStatusValues).default("active").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("toll_plazas_status_idx").on(table.status)],
+);
+
+export const recommendationCampaigns = mysqlTable(
+  "recommendationCampaigns",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    partnerId: int("partnerId").notNull().references(() => partners.id, { onDelete: "restrict" }),
+    couponId: int("couponId").notNull().references(() => coupons.id, { onDelete: "restrict" }),
+    tollPlazaId: int("tollPlazaId").references(() => tollPlazas.id, { onDelete: "set null" }),
+    name: varchar("name", { length: 160 }).notNull(),
+    mode: mysqlEnum("mode", recommendationModeValues).notNull(),
+    sponsorshipLabel: varchar("sponsorshipLabel", { length: 80 }),
+    startsAt: datetime("startsAt").notNull(),
+    endsAt: datetime("endsAt").notNull(),
+    budgetLimit: decimal("budgetLimit", { precision: 12, scale: 2, mode: "number" }),
+    bidAmount: decimal("bidAmount", { precision: 12, scale: 4 }),
+    spentAmount: decimal("spentAmount", { precision: 12, scale: 2 }).default("0").notNull(),
+    frequencyCap: int("frequencyCap").default(1).notNull(),
+    status: mysqlEnum("status", recommendationCampaignStatusValues).default("draft").notNull(),
+    createdByUserId: int("createdByUserId").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index("recommendation_campaigns_partner_idx").on(table.partnerId),
+    index("recommendation_campaigns_coupon_idx").on(table.couponId),
+    index("recommendation_campaigns_toll_idx").on(table.tollPlazaId),
+    index("recommendation_campaigns_status_idx").on(table.status, table.startsAt, table.endsAt),
+  ],
+);
+
+export const tollPassageEvents = mysqlTable(
+  "tollPassageEvents",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    idempotencyKey: varchar("idempotencyKey", { length: 180 }).notNull().unique(),
+    userReference: varchar("userReference", { length: 160 }).notNull(),
+    tollPlazaId: int("tollPlazaId").notNull().references(() => tollPlazas.id, { onDelete: "restrict" }),
+    occurredAt: datetime("occurredAt").notNull(),
+    accuracyMeters: int("accuracyMeters"),
+    consentPersonalization: int("consentPersonalization").default(0).notNull(),
+    source: varchar("source", { length: 40 }).notNull(),
+    payloadJson: text("payloadJson"),
+    isSimulation: int("isSimulation").default(0).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [
+    index("toll_passage_events_user_idx").on(table.userReference, table.occurredAt),
+    index("toll_passage_events_toll_idx").on(table.tollPlazaId, table.occurredAt),
+  ],
+);
+
+export const recommendationDeliveries = mysqlTable(
+  "recommendationDeliveries",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    idempotencyKey: varchar("idempotencyKey", { length: 180 }).notNull().unique(),
+    passageEventId: int("passageEventId").notNull().references(() => tollPassageEvents.id, { onDelete: "restrict" }),
+    campaignId: int("campaignId").notNull().references(() => recommendationCampaigns.id, { onDelete: "restrict" }),
+    couponId: int("couponId").notNull().references(() => coupons.id, { onDelete: "restrict" }),
+    userReference: varchar("userReference", { length: 160 }).notNull(),
+    mode: mysqlEnum("mode", recommendationModeValues).notNull(),
+    score: decimal("score", { precision: 8, scale: 4, mode: "number" }).notNull(),
+    explanation: varchar("explanation", { length: 300 }).notNull(),
+    status: mysqlEnum("status", recommendationDeliveryStatusValues).default("prepared").notNull(),
+    isSimulation: int("isSimulation").default(0).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index("recommendation_deliveries_event_idx").on(table.passageEventId),
+    index("recommendation_deliveries_user_idx").on(table.userReference, table.createdAt),
+    index("recommendation_deliveries_campaign_idx").on(table.campaignId, table.status),
+  ],
+);
+
 export const emailOutbox = mysqlTable(
   "emailOutbox",
   {
@@ -361,3 +457,7 @@ export type EmailSender = typeof emailSenders.$inferSelect;
 export type EmailTemplate = typeof emailTemplates.$inferSelect;
 export type EmailRule = typeof emailRules.$inferSelect;
 export type EmailOutbox = typeof emailOutbox.$inferSelect;
+export type TollPlaza = typeof tollPlazas.$inferSelect;
+export type RecommendationCampaign = typeof recommendationCampaigns.$inferSelect;
+export type TollPassageEvent = typeof tollPassageEvents.$inferSelect;
+export type RecommendationDelivery = typeof recommendationDeliveries.$inferSelect;

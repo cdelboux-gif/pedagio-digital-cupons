@@ -29,6 +29,14 @@ import {
   emailTemplates,
   emailRules,
   emailOutbox,
+  tollPlazas,
+  recommendationCampaigns,
+  tollPassageEvents,
+  recommendationDeliveries,
+  type TollPlaza,
+  type RecommendationCampaign,
+  type TollPassageEvent,
+  type RecommendationDelivery,
   type InsertUser,
   partners,
   type PartnerStore,
@@ -1056,6 +1064,73 @@ export async function simulateEmailOutbox(id: number) {
   const rows = await db.select().from(emailOutbox).where(eq(emailOutbox.id, id)).limit(1);
   return rows[0];
 }
+export async function listTollPlazas() {
+  const db = await requireDb();
+  return db.select().from(tollPlazas).orderBy(tollPlazas.name);
+}
+
+export type TollPlazaInput = Pick<TollPlaza, "code" | "name" | "highway" | "direction" | "latitude" | "longitude" | "radiusMeters" | "status">;
+export async function createTollPlaza(input: TollPlazaInput) {
+  const db = await requireDb();
+  const result = await db.insert(tollPlazas).values(input);
+  const rows = await db.select().from(tollPlazas).where(eq(tollPlazas.id, Number(result[0].insertId))).limit(1);
+  return rows[0];
+}
+
+export async function listRecommendationCampaigns() {
+  const db = await requireDb();
+  return db.select().from(recommendationCampaigns).orderBy(desc(recommendationCampaigns.updatedAt));
+}
+
+export async function listRecommendationCandidatesForToll(tollPlazaId: number) {
+  const db = await requireDb();
+  const rows = await db
+    .select({ campaign: recommendationCampaigns, coupon: coupons })
+    .from(recommendationCampaigns)
+    .innerJoin(coupons, eq(coupons.id, recommendationCampaigns.couponId))
+    .where(eq(recommendationCampaigns.tollPlazaId, tollPlazaId));
+  return rows;
+}
+
+export type RecommendationCampaignInput = Pick<RecommendationCampaign, "partnerId" | "couponId" | "tollPlazaId" | "name" | "mode" | "sponsorshipLabel" | "startsAt" | "endsAt" | "budgetLimit" | "bidAmount" | "frequencyCap" | "status"> & { createdByUserId: number };
+export async function createRecommendationCampaign(input: RecommendationCampaignInput) {
+  const db = await requireDb();
+  const result = await db.insert(recommendationCampaigns).values(input);
+  const rows = await db.select().from(recommendationCampaigns).where(eq(recommendationCampaigns.id, Number(result[0].insertId))).limit(1);
+  return rows[0];
+}
+
+export async function recordTollPassageEvent(input: Pick<TollPassageEvent, "idempotencyKey" | "userReference" | "tollPlazaId" | "occurredAt" | "accuracyMeters" | "consentPersonalization" | "source" | "payloadJson" | "isSimulation">) {
+  const db = await requireDb();
+  try {
+    const result = await db.insert(tollPassageEvents).values(input);
+    const rows = await db.select().from(tollPassageEvents).where(eq(tollPassageEvents.id, Number(result[0].insertId))).limit(1);
+    return { created: true, row: rows[0] };
+  } catch (error) {
+    if ((error as { code?: string }).code !== "ER_DUP_ENTRY") throw error;
+    const rows = await db.select().from(tollPassageEvents).where(eq(tollPassageEvents.idempotencyKey, input.idempotencyKey)).limit(1);
+    return { created: false, row: rows[0] };
+  }
+}
+
+export async function listPreparedRecommendationDeliveries(userReference: string, passageEventId: number) {
+  const db = await requireDb();
+  return db.select().from(recommendationDeliveries).where(and(eq(recommendationDeliveries.userReference, userReference), eq(recommendationDeliveries.passageEventId, passageEventId), eq(recommendationDeliveries.isSimulation, 1))).orderBy(desc(recommendationDeliveries.score));
+}
+
+export async function createRecommendationDelivery(input: Pick<RecommendationDelivery, "idempotencyKey" | "passageEventId" | "campaignId" | "couponId" | "userReference" | "mode" | "score" | "explanation" | "status" | "isSimulation">) {
+  const db = await requireDb();
+  try {
+    const result = await db.insert(recommendationDeliveries).values(input);
+    const rows = await db.select().from(recommendationDeliveries).where(eq(recommendationDeliveries.id, Number(result[0].insertId))).limit(1);
+    return { created: true, row: rows[0] };
+  } catch (error) {
+    if ((error as { code?: string }).code !== "ER_DUP_ENTRY") throw error;
+    const rows = await db.select().from(recommendationDeliveries).where(eq(recommendationDeliveries.idempotencyKey, input.idempotencyKey)).limit(1);
+    return { created: false, row: rows[0] };
+  }
+}
+
 export async function retryEmailOutbox(id: number) {
   const db = await requireDb();
   await db.update(emailOutbox).set({ status: "queued", lastError: null, availableAt: new Date() }).where(eq(emailOutbox.id, id));
