@@ -17,3 +17,15 @@ Não foram observados overflow horizontal ou texto ilegível nas capturas. A abe
 ## Ajuste de layout da matriz de acessos
 
 Na primeira captura desktop, os quatro seletores de escopo ficaram visualmente comprimidos na mesma linha. A grade foi ajustada para separar a identidade do login dos controles de acesso; a nova captura mostra os seletores distribuídos e a indicação de escopo global sem sobreposição. O comportamento mobile permanece empilhado.
+
+## Criação de logins — mobile — 390 × 844
+
+A área de Acessos exibe o botão **Criar login** com largura adequada, a matriz de níveis permanece legível e a seção de convites aparece após os níveis. A página pública `/convite` apresenta o convite, explica que o acesso será concluído pelo OAuth gerenciado e oferece o CTA **Entrar e aceitar convite**. O token não é exibido no conteúdo da página além de ser usado pelo botão para iniciar o fluxo.
+
+## Criação de logins — desktop — 1280 × 720
+
+A tela de Acessos apresenta o CTA **Criar login** no cabeçalho, a matriz de níveis em quatro colunas, a área de convites e a lista de logins com escopos alinhados. A página pública `/convite` mantém o cartão centralizado, o CTA de aceite e a explicação de que o OAuth gerenciado não cria senhas locais.
+
+## Criação de login — modal desktop — 1280 × 720
+
+O deep link interno `/acessos?novo=1` abriu o modal real de criação. O formulário apresenta e-mail obrigatório, nível de acesso, validade do convite, entidade, parceiro e loja, com os botões **Fechar** e **Gerar convite**. A composição permanece contida, legível e sem sobreposição no desktop. A geração da URL e sua copiabilidade estão cobertas pelo teste do contrato tRPC; a visualização pós-mutação depende de executar o envio com um e-mail administrativo real.

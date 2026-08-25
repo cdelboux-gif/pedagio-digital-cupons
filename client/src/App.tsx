@@ -13,23 +13,14 @@ import Integrations from "./pages/Integrations";
 import Entities from "./pages/Entities";
 import Stores from "./pages/Stores";
 import Access from "./pages/Access";
+import Invite from "./pages/Invite";
+
+function ProtectedRouter() {
+  return <DashboardLayout><Switch><Route path="/" component={Dashboard} /><Route path="/parceiros" component={Partners} /><Route path="/cupons" component={Coupons} /><Route path="/utilizacoes" component={Uses} /><Route path="/integracoes" component={Integrations} /><Route path="/entidades" component={Entities} /><Route path="/lojas" component={Stores} /><Route path="/acessos" component={Access} /><Route component={NotFound} /></Switch></DashboardLayout>;
+}
 
 function Router() {
-  return (
-    <DashboardLayout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/parceiros" component={Partners} />
-        <Route path="/cupons" component={Coupons} />
-        <Route path="/utilizacoes" component={Uses} />
-        <Route path="/integracoes" component={Integrations} />
-        <Route path="/entidades" component={Entities} />
-        <Route path="/lojas" component={Stores} />
-        <Route path="/acessos" component={Access} />
-        <Route component={NotFound} />
-      </Switch>
-    </DashboardLayout>
-  );
+  return <Switch><Route path="/convite" component={Invite} /><Route component={ProtectedRouter} /></Switch>;
 }
 
 export default function App() {

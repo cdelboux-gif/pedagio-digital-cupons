@@ -23,6 +23,7 @@ export const integrationStatusValues = ["active", "paused"] as const;
 export const accessLevelValues = ["admin", "manager", "operator", "viewer"] as const;
 export const entityStatusValues = ["active", "inactive"] as const;
 export const storeStatusValues = ["active", "inactive"] as const;
+export const loginInviteStatusValues = ["pending", "accepted", "revoked", "expired"] as const;
 
 /** Core user table backing the Manus OAuth flow. */
 export const users = mysqlTable("users", {
@@ -40,6 +41,32 @@ export const users = mysqlTable("users", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
+
+export const loginInvites = mysqlTable(
+  "loginInvites",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    email: varchar("email", { length: 320 }).notNull(),
+    tokenHash: varchar("tokenHash", { length: 64 }).notNull(),
+    status: mysqlEnum("status", loginInviteStatusValues).default("pending").notNull(),
+    accessLevel: mysqlEnum("accessLevel", accessLevelValues).default("viewer").notNull(),
+    entityId: int("entityId").references(() => entities.id, { onDelete: "set null" }),
+    partnerId: int("partnerId").references(() => partners.id, { onDelete: "set null" }),
+    storeId: int("storeId").references(() => partnerStores.id, { onDelete: "set null" }),
+    invitedByUserId: int("invitedByUserId").references(() => users.id, { onDelete: "set null" }),
+    acceptedUserId: int("acceptedUserId").references(() => users.id, { onDelete: "set null" }),
+    expiresAt: datetime("expiresAt").notNull(),
+    acceptedAt: datetime("acceptedAt"),
+    revokedAt: datetime("revokedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    uniqueIndex("login_invites_token_hash_uq").on(table.tokenHash),
+    index("login_invites_email_idx").on(table.email),
+    index("login_invites_status_idx").on(table.status),
+  ],
+);
 
 export const partners = mysqlTable(
   "partners",
@@ -209,3 +236,4 @@ export type PartnerStore = typeof partnerStores.$inferSelect;
 export type Coupon = typeof coupons.$inferSelect;
 export type CouponUse = typeof couponUses.$inferSelect;
 export type PartnerIntegration = typeof partnerIntegrations.$inferSelect;
+export type LoginInvite = typeof loginInvites.$inferSelect;

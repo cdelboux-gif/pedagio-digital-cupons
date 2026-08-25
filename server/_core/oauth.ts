@@ -3,7 +3,12 @@ import { parse as parseCookieHeader } from "cookie";
 import type { Express, Request, Response } from "express";
 import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
+import { LOGIN_INVITE_COOKIE } from "@shared/const";
 import { sdk } from "./sdk";
+
+export function buildInvitedUserFields(invite: Parameters<typeof db.getLoginInviteAccessPatch>[0]) {
+  return db.getLoginInviteAccessPatch(invite);
+}
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
@@ -40,13 +45,23 @@ export function registerOAuthRoutes(app: Express) {
         return;
       }
 
+      const cookies = parseCookieHeader(req.headers.cookie ?? "");
+      const inviteToken = cookies[LOGIN_INVITE_COOKIE];
+      const invite = inviteToken && userInfo.email ? await db.getPendingLoginInvite(userInfo.email, inviteToken) : null;
       await db.upsertUser({
         openId: userInfo.openId,
         name: userInfo.name || null,
         email: userInfo.email ?? null,
         loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
+        ...(invite ? buildInvitedUserFields(invite) : {}),
         lastSignedIn: new Date(),
       });
+
+      if (invite && inviteToken) {
+        const syncedUser = await db.getUserByOpenId(userInfo.openId);
+        if (syncedUser) await db.acceptLoginInvite(userInfo.email!, inviteToken, syncedUser.id);
+      }
+      res.clearCookie(LOGIN_INVITE_COOKIE, { path: "/", secure: true, sameSite: "lax" });
 
       const sessionToken = await sdk.createSessionToken(userInfo.openId, {
         name: userInfo.name || "",

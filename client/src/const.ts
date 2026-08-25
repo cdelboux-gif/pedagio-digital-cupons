@@ -1,6 +1,6 @@
-import { OAUTH_STATE_COOKIE, encodeOAuthState } from "@shared/const";
+import { LOGIN_INVITE_COOKIE, OAUTH_STATE_COOKIE, encodeOAuthState } from "@shared/const";
 
-export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+export { COOKIE_NAME, LOGIN_INVITE_COOKIE, ONE_YEAR_MS } from "@shared/const";
 
 // Start the Manus OAuth login. Call this from an event handler or effect at the
 // moment you want to navigate, e.g. `onClick={() => startLogin()}`.
@@ -12,11 +12,12 @@ export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 // call would desync it from an in-flight login and the callback would reject it
 // with "invalid oauth state". It returns void by design, so there is no URL to
 // stash across renders.
-export const startLogin = () => {
+export const startLogin = (inviteToken?: string) => {
   const oauthPortalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL;
   const appId = import.meta.env.VITE_APP_ID;
   const redirectUri = `${window.location.origin}/api/oauth/callback`;
 
+  if (inviteToken) document.cookie = `${LOGIN_INVITE_COOKIE}=${encodeURIComponent(inviteToken)}; Path=/; Max-Age=900; SameSite=Lax; Secure`;
   const nonce = crypto.randomUUID();
   document.cookie = `${OAUTH_STATE_COOKIE}=${nonce}; Path=/; Max-Age=600; SameSite=None; Secure`;
   const state = encodeOAuthState({ redirectUri, nonce });

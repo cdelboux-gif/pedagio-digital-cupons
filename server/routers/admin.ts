@@ -21,6 +21,11 @@ import {
   listPartnerIntegrations,
   listPartnerStores,
   createPartnerIntegration,
+  createLoginInvite,
+  activateLoginInvite,
+  listLoginInvites,
+  resendLoginInvite,
+  revokeLoginInvite,
   updateUserAccess,
   registerCouponUse,
   updateCoupon,
@@ -40,6 +45,7 @@ const integrationStatus = z.enum(integrationStatusValues);
 const accessLevel = z.enum(accessLevelValues);
 const entityStatus = z.enum(entityStatusValues);
 const storeStatus = z.enum(storeStatusValues);
+const loginInviteStatus = z.enum(["pending", "accepted", "revoked", "expired"]);
 const nullableId = z.number().int().positive().nullable().optional();
 const imageUpload = z.object({
   fileName: z.string().trim().min(1).max(160),
@@ -247,6 +253,37 @@ export const adminRouter = router({
   access: router({
     list: superAdminProcedure.query(() => listAccessUsers()),
     update: superAdminProcedure.input(z.object({ id: z.number().int().positive(), data: userAccessInput })).mutation(({ input }) => updateUserAccess(input.id, input.data)),
+    invites: router({
+      list: superAdminProcedure.query(() => listLoginInvites()),
+      create: superAdminProcedure.input(z.object({
+        email: z.string().trim().email().max(320),
+        accessLevel,
+        entityId: nullableId,
+        partnerId: nullableId,
+        storeId: nullableId,
+        expiresInDays: z.number().int().min(1).max(30).default(7),
+        origin: z.string().url(),
+      })).mutation(async ({ input, ctx }) => {
+        if (input.storeId) {
+          const store = await getPartnerStoreById(input.storeId);
+          if (!store || (input.partnerId && store.partnerId !== input.partnerId)) throw new TRPCError({ code: "BAD_REQUEST", message: "A loja precisa pertencer ao parceiro selecionado" });
+        }
+        const created = await createLoginInvite({ email: input.email, accessLevel: input.accessLevel, entityId: input.entityId ?? null, partnerId: input.partnerId ?? null, storeId: input.storeId ?? null, expiresAt: new Date(Date.now() + input.expiresInDays * 24 * 60 * 60 * 1000), invitedByUserId: ctx.user.id });
+        if (!created) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar o convite" });
+        return { ...created.invite, inviteUrl: `${input.origin.replace(/\/$/, "")}/convite?token=${encodeURIComponent(created.token)}` };
+      }),
+      resend: superAdminProcedure.input(z.object({ id: z.number().int().positive(), origin: z.string().url() })).mutation(async ({ input, ctx }) => {
+        const created = await resendLoginInvite(input.id, ctx.user.id);
+        if (!created) throw new TRPCError({ code: "NOT_FOUND", message: "Convite não encontrado" });
+        return { ...created.invite, inviteUrl: `${input.origin.replace(/\/$/, "")}/convite?token=${encodeURIComponent(created.token)}` };
+      }),
+      revoke: superAdminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => revokeLoginInvite(input.id)),
+      activate: superAdminProcedure.input(z.object({ id: z.number().int().positive(), userId: z.number().int().positive() })).mutation(async ({ input }) => {
+        const activated = await activateLoginInvite(input.id, input.userId);
+        if (!activated) throw new TRPCError({ code: "BAD_REQUEST", message: "O e-mail do usuário não corresponde ao convite ou o convite não está mais disponível" });
+        return activated;
+      }),
+    }),
   }),
 
   uses: router({

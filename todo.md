@@ -103,7 +103,7 @@
 - [x] Atualizar cadastro, listagens, filtros e cupons para selecionar e exibir a loja vinculada.
 - [x] Cobrir imagens, permissões, entidades e múltiplas lojas com testes automatizados.
 - [x] Validar visualmente os novos fluxos em desktop e mobile.
-- [ ] Publicar a expansão no próximo checkpoint.
+- [x] Publicar a expansão no checkpoint 59a64177.
 
 - [x] Adicionar testes automatizados para criação e listagem de entidades e lojas administrativas.
 - [x] Adicionar testes automatizados para vínculo de loja em cupons e utilizações, incluindo filtros por loja.
@@ -112,3 +112,28 @@
 - [x] Testar `admin.uses.list` com filtro por `storeId` e verificar a propagação correta do filtro.
 - [x] Testar o caminho positivo de utilização com `storeId`, verificando o vínculo enviado ao helper de registro.
 - [x] Assegurar nos testes de upload que a resposta traz URL pública e não expõe `logoKey`, `itemImageKey` ou hashes internos.
+
+
+## Criação de logins administrativos
+
+- [x] Definir fluxo de convite de login usando o OAuth gerenciado, sem senha local.
+- [x] Modelar estado de convite, token com expiração e vínculo de e-mail ao usuário.
+- [x] Criar API admin-only para criar, listar, reenviar, revogar e ativar convites.
+- [x] Associar no convite o nível de acesso e os escopos de entidade, parceiro e loja.
+- [x] Criar tela de novo login e ações de gestão na área de Acessos.
+- [x] Implementar entrada segura do convidado no OAuth e sincronização do acesso após o primeiro login.
+- [x] Testar expiração, token de uso único, autorização e preservação dos escopos.
+- [x] Validar visualmente o fluxo.
+- [ ] Publicar a criação de logins no próximo checkpoint.
+
+- [x] Expor uma operação administrativa verificável de ativação/aceite manual, mantendo o aceite automático no OAuth.
+- [x] Testar convite expirado, token já consumido e aplicação dos escopos no primeiro login.
+- [x] Validar em desktop o diálogo de criação, cópia da URL one-time e a página pública de convite.
+
+- [x] Testar o consumo único real de `acceptLoginInvite`, impedindo reutilização do token após aceite.
+- [x] Testar o primeiro login convidado verificando aplicação e persistência de accessLevel, entityId, partnerId e storeId.
+- [x] Validar visualmente o modal aberto e o contrato da URL gerada com ação de cópia.
+
+- [x] Executar duas vezes `acceptLoginInvite` com driver isolado e confirmar que a segunda tentativa falha.
+- [x] Testar o patch do callback OAuth com usuário convidado, verificando persistência dos quatro escopos.
+- [x] Validar o contrato da mutação de criação e a composição visual do modal com URL one-time copiável.

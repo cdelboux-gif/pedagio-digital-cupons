@@ -21,15 +21,21 @@ import {
   integrationEventValues,
   partnerIntegrations,
   partnerStores,
+  loginInvites,
   type InsertUser,
   partners,
   type PartnerStore,
+  type LoginInvite,
   users,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { storagePut } from "./storage";
 
 let _db: ReturnType<typeof drizzle> | null = null;
+
+/** Test-only database seam; production code never calls this setter. */
+export function setDbForTests(database: unknown) { _db = database as ReturnType<typeof drizzle>; }
+export function clearDbForTests() { _db = null; }
 
 export class DatabaseUnavailableError extends Error {
   constructor() {
@@ -314,6 +320,109 @@ export async function updatePartnerStore(id: number, input: StoreInput) {
   const db = await requireDb();
   await db.update(partnerStores).set(input).where(eq(partnerStores.id, id));
   return getPartnerStoreById(id);
+}
+
+export type LoginInviteInput = Pick<LoginInvite, "email" | "accessLevel" | "entityId" | "partnerId" | "storeId"> & { expiresAt: Date; invitedByUserId: number };
+
+export function normalizeLoginEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+export function createLoginInviteToken() {
+  return `pd_inv_${randomBytes(32).toString("base64url")}`;
+}
+
+export function hashLoginInviteToken(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+export function publicLoginInvite(row: LoginInvite) {
+  const { tokenHash: _tokenHash, ...safeInvite } = row;
+  return safeInvite;
+}
+
+export function isLoginInviteUsable(row: Pick<LoginInvite, "status" | "expiresAt">, now = new Date()) {
+  return row.status === "pending" && row.expiresAt > now;
+}
+
+export function getLoginInviteAccessPatch(invite: Pick<LoginInvite, "accessLevel" | "entityId" | "partnerId" | "storeId">) {
+  return { accessLevel: invite.accessLevel, entityId: invite.entityId, partnerId: invite.partnerId, storeId: invite.storeId, role: invite.accessLevel === "admin" ? "admin" as const : undefined };
+}
+
+export function buildAcceptedLoginInvitePatch(row: Pick<LoginInvite, "status" | "expiresAt">, userId: number, now = new Date()) {
+  if (!isLoginInviteUsable(row, now)) return null;
+  return { status: "accepted" as const, acceptedUserId: userId, acceptedAt: now };
+}
+
+export async function createLoginInvite(input: LoginInviteInput) {
+  const db = await requireDb();
+  const token = createLoginInviteToken();
+  const email = normalizeLoginEmail(input.email);
+  await db.update(loginInvites).set({ status: "revoked", revokedAt: new Date() }).where(and(eq(loginInvites.email, email), eq(loginInvites.status, "pending")));
+  const result = await db.insert(loginInvites).values({ ...input, email, tokenHash: hashLoginInviteToken(token), status: "pending" });
+  const rows = await db.select().from(loginInvites).where(eq(loginInvites.id, Number(result[0].insertId))).limit(1);
+  return rows[0] ? { invite: publicLoginInvite(rows[0]), token } : null;
+}
+
+export async function getLoginInviteById(id: number) {
+  const db = await requireDb();
+  const rows = await db.select().from(loginInvites).where(eq(loginInvites.id, id)).limit(1);
+  return rows[0];
+}
+
+export async function getPendingLoginInvite(email: string, token: string) {
+  const db = await requireDb();
+  const now = new Date();
+  const rows = await db.select().from(loginInvites).where(and(eq(loginInvites.email, normalizeLoginEmail(email)), eq(loginInvites.tokenHash, hashLoginInviteToken(token)), eq(loginInvites.status, "pending"), gt(loginInvites.expiresAt, now))).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function listLoginInvites() {
+  const db = await requireDb();
+  const rows = await db.select().from(loginInvites).orderBy(desc(loginInvites.createdAt));
+  const now = new Date();
+  const expired = rows.filter(row => row.status === "pending" && row.expiresAt <= now).map(row => row.id);
+  if (expired.length) {
+    await db.update(loginInvites).set({ status: "expired" }).where(sql`${loginInvites.id} in (${sql.join(expired.map(id => sql`${id}`), sql`, `)})`);
+  }
+  return rows.map(row => expired.includes(row.id) ? publicLoginInvite({ ...row, status: "expired" }) : publicLoginInvite(row));
+}
+
+export async function resendLoginInvite(id: number, invitedByUserId: number) {
+  const current = await getLoginInviteById(id);
+  if (!current) return null;
+  return createLoginInvite({ email: current.email, accessLevel: current.accessLevel, entityId: current.entityId, partnerId: current.partnerId, storeId: current.storeId, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), invitedByUserId });
+}
+
+export async function activateLoginInvite(id: number, userId: number) {
+  const db = await requireDb();
+  const inviteRows = await db.select().from(loginInvites).where(eq(loginInvites.id, id)).limit(1);
+  const userRows = await db.select({ id: users.id, email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+  const invite = inviteRows[0];
+  const user = userRows[0];
+  if (!invite || !user?.email || normalizeLoginEmail(user.email) !== normalizeLoginEmail(invite.email)) return null;
+  const patch = buildAcceptedLoginInvitePatch(invite, userId);
+  if (!patch) return null;
+  await db.update(loginInvites).set(patch).where(and(eq(loginInvites.id, id), eq(loginInvites.status, "pending")));
+  const rows = await db.select().from(loginInvites).where(eq(loginInvites.id, id)).limit(1);
+  return rows[0] ? publicLoginInvite(rows[0]) : null;
+}
+
+export async function acceptLoginInvite(email: string, token: string, userId: number) {
+  const db = await requireDb();
+  const now = new Date();
+  const emailNormalized = normalizeLoginEmail(email);
+  const result = await db.update(loginInvites).set({ status: "accepted", acceptedUserId: userId, acceptedAt: now }).where(and(eq(loginInvites.email, emailNormalized), eq(loginInvites.tokenHash, hashLoginInviteToken(token)), eq(loginInvites.status, "pending"), gt(loginInvites.expiresAt, now)));
+  if (!result[0]?.affectedRows) return null;
+  const rows = await db.select().from(loginInvites).where(and(eq(loginInvites.email, emailNormalized), eq(loginInvites.acceptedUserId, userId))).orderBy(desc(loginInvites.acceptedAt)).limit(1);
+  return rows[0] ? publicLoginInvite(rows[0]) : null;
+}
+
+export async function revokeLoginInvite(id: number) {
+  const db = await requireDb();
+  await db.update(loginInvites).set({ status: "revoked", revokedAt: new Date() }).where(and(eq(loginInvites.id, id), eq(loginInvites.status, "pending")));
+  const rows = await db.select().from(loginInvites).where(eq(loginInvites.id, id)).limit(1);
+  return rows[0] ? publicLoginInvite(rows[0]) : null;
 }
 
 export async function listAccessUsers() {
