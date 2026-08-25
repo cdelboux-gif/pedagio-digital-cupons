@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as db from "./db";
 import { appendAuditLog, redactAuditValue } from "./db";
+import { getEmailTransport } from "./email-transport";
 import {
   buildEmailIdempotencyKey,
   extractEmailVariables,
@@ -46,6 +47,13 @@ describe("email safety and rule helpers", () => {
     const different = buildEmailIdempotencyKey("coupon.redeemed", "cliente@example.com", 4, "event-10");
     expect(first).toBe(second);
     expect(first).not.toBe(different);
+  });
+});
+
+describe("email transport boundary", () => {
+  it("keeps future provider names behind the outbox transport until enabled", async () => {
+    await expect(getEmailTransport("resend").send({ to: "cliente@example.com", from: "noreply@example.com", subject: "Teste", html: "<p>Teste</p>" })).rejects.toThrow("Nenhum provedor externo");
+    expect(getEmailTransport("elastic-email")).toBe(getEmailTransport("outbox"));
   });
 });
 

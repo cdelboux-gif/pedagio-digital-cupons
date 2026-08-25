@@ -179,7 +179,7 @@
 - [x] Implementar editor de estrutura de e-mail com assunto, preheader, blocos e preview seguro.
 - [x] Implementar criação de mensagens por evento/regra com chave idempotente e status de fila.
 - [x] Implementar simulação de envio, reprocessamento controlado e histórico de tentativas sem provedor externo.
-- [ ] Criar adaptador de transporte desacoplado para conexão futura com Resend ou Elastic Email.
+- [x] Criar adaptador de transporte desacoplado para conexão futura com Resend ou Elastic Email.
 - [x] Registrar auditoria de alterações de níveis, escopos, convites, templates, regras e ações do outbox.
 - [x] Criar telas de auditoria, templates, regras e mensagens pendentes/enviadas.
 - [x] Testar segurança, autorização, sanitização de HTML, variáveis, idempotência e responsividade.
