@@ -42,11 +42,11 @@
 - [x] Incluir campos de endereço completo no formulário de cadastro e edição de parceiro.
 - [x] Exibir mapa para validação do ponto do parceiro e permitir ajuste da localização.
 - [x] Disponibilizar link de destino GPS para o endereço confirmado do parceiro.
-- [ ] Testar ponta a ponta o salvamento de endereço, renderização do mapa e geração segura do destino GPS.
-- [ ] Validar em sessão administrativa um parceiro com endereço completo, ponto de mapa e destino GPS publicados.
-- [ ] Registrar temporariamente um endereço de validação, confirmar o mapa e o destino GPS e restaurar o parceiro sem endereço ao final.
-- [ ] Permitir limpar o ponto GPS e os campos de endereço diretamente no formulário de parceiro.
-- [ ] Publicar o controle de limpeza de localização antes da restauração final do parceiro de teste.
+- [x] Testar ponta a ponta o salvamento de endereço, renderização do mapa e geração segura do destino GPS.
+- [x] Validar em sessão administrativa um parceiro com endereço completo, ponto de mapa e destino GPS publicados.
+- [x] Registrar temporariamente um endereço de validação, confirmar o mapa e o destino GPS e restaurar o parceiro sem endereço ao final.
+- [x] Permitir limpar o ponto GPS e os campos de endereço diretamente no formulário de parceiro.
+- [x] Publicar o controle de limpeza de localização antes da restauração final do parceiro de teste.
 - [x] Cobrir a validação de latitude e longitude nas entradas protegidas de parceiros.
 - [x] Ocultar o destino GPS até que o parceiro tenha endereço ou coordenadas válidos.
-- [ ] Publicar a extensão de endereço e localização do cadastro de parceiros.
+- [x] Publicar a extensão de endereço e localização do cadastro de parceiros.
