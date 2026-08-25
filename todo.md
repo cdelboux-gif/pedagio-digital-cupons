@@ -64,8 +64,14 @@
 - [x] Exibir regras de HMAC, timestamp, idempotência, replay e respostas HTTP.
 - [x] Exibir próximos passos para homologação e ativação futura por parceiro.
 - [x] Testar a nova área no desktop, no celular e em sessão administrativa.
-- [ ] Publicar a nova área de Integrações sem ativar endpoints externos.
-- [ ] Orientar o uso da área e os limites do escopo atual.
+- [x] Publicar a nova área de Integrações sem ativar endpoints externos.
+- [x] Orientar o uso da área e os limites do escopo atual.
 
-- [ ] Validar `/integracoes` com sessão autenticada de administrador, confirmando acesso ao conteúdo e não apenas ao bloqueio de acesso.
-- [ ] Registrar evidência autenticada desktop/mobile da área de Integrações após login administrativo.
+- [x] Validar `/integracoes` com sessão autenticada de administrador, confirmando acesso ao conteúdo e não apenas ao bloqueio de acesso.
+- [x] Registrar evidência autenticada desktop/mobile da área de Integrações após login administrativo.
+
+- [x] Validar `/integracoes` em viewport móvel com sessão autenticada de administrador.
+- [x] Atualizar as notas com evidência separada de desktop autenticado e mobile autenticado.
+
+- [x] Validar `/integracoes` em viewport móvel no domínio publicado com sessão autenticada de administrador, conforme confirmação do usuário.
+- [x] Atualizar as notas separando a evidência técnica de desktop autenticado da confirmação de uso mobile fornecida pelo usuário.
