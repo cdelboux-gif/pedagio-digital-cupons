@@ -36,3 +36,14 @@
 - [x] Confirmar com a sessão administrativa liberada que o dashboard e as ações de status de cupom permanecem acessíveis.
 - [x] Executar e registrar, com um cupom de teste, a ativação sem confirmação, a pausa com confirmação e o encerramento com confirmação.
 - [x] Confirmar no ambiente publicado os estados resultantes após cada transição autorizada do cupom CAFE01.
+- [x] Modelar endereço completo e coordenadas de localização no cadastro de parceiros.
+- [x] Aplicar a migração de banco para endereço e coordenadas de parceiros.
+- [x] Atualizar APIs administrativas protegidas para salvar e retornar endereço e localização dos parceiros.
+- [x] Incluir campos de endereço completo no formulário de cadastro e edição de parceiro.
+- [x] Exibir mapa para validação do ponto do parceiro e permitir ajuste da localização.
+- [x] Disponibilizar link de destino GPS para o endereço confirmado do parceiro.
+- [ ] Testar ponta a ponta o salvamento de endereço, renderização do mapa e geração segura do destino GPS.
+- [ ] Validar em sessão administrativa um parceiro com endereço completo, ponto de mapa e destino GPS publicados.
+- [x] Cobrir a validação de latitude e longitude nas entradas protegidas de parceiros.
+- [x] Ocultar o destino GPS até que o parceiro tenha endereço ou coordenadas válidos.
+- [ ] Publicar a extensão de endereço e localização do cadastro de parceiros.

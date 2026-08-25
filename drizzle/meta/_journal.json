@@ -15,6 +15,13 @@
       "when": 1787627010586,
       "tag": "0001_flashy_mauler",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1787663823316,
+      "tag": "0002_fancy_sister_grimm",
+      "breakpoints": true
     }
   ]
 }

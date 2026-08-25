@@ -22,17 +22,32 @@ const partnerStatus = z.enum(["prospect", "active", "inactive", "blocked"]);
 const couponStatus = z.enum(["draft", "active", "paused", "ended"]);
 const nullableText = (max: number) => z.string().trim().max(max).nullable().optional();
 
-const partnerInput = z.object({
-  displayName: z.string().trim().min(2, "Informe o nome comercial").max(160),
-  legalName: nullableText(200),
-  taxId: nullableText(32),
-  category: nullableText(80),
-  contactName: nullableText(120),
-  email: z.string().trim().email("Informe um e-mail válido").max(320).nullable().optional(),
-  phone: nullableText(32),
-  relationshipStatus: partnerStatus,
-  notes: nullableText(2000),
-});
+export const partnerInput = z
+  .object({
+    displayName: z.string().trim().min(2, "Informe o nome comercial").max(160),
+    legalName: nullableText(200),
+    taxId: nullableText(32),
+    category: nullableText(80),
+    contactName: nullableText(120),
+    email: z.string().trim().email("Informe um e-mail válido").max(320).nullable().optional(),
+    phone: nullableText(32),
+    addressStreet: nullableText(200),
+    addressNumber: nullableText(32),
+    addressComplement: nullableText(120),
+    addressNeighborhood: nullableText(120),
+    addressCity: nullableText(120),
+    addressState: z.string().trim().toUpperCase().max(2).nullable().optional(),
+    addressPostalCode: nullableText(16),
+    addressCountry: z.string().trim().toUpperCase().max(2).nullable().optional(),
+    latitude: z.number().min(-90).max(90).nullable().optional(),
+    longitude: z.number().min(-180).max(180).nullable().optional(),
+    relationshipStatus: partnerStatus,
+    notes: nullableText(2000),
+  })
+  .refine(
+    value => (value.latitude == null) === (value.longitude == null),
+    { message: "Informe latitude e longitude juntas", path: ["latitude"] },
+  );
 
 const couponInput = z
   .object({

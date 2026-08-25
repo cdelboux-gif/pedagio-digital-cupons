@@ -114,6 +114,16 @@ type PartnerInput = {
   contactName?: string | null;
   email?: string | null;
   phone?: string | null;
+  addressStreet?: string | null;
+  addressNumber?: string | null;
+  addressComplement?: string | null;
+  addressNeighborhood?: string | null;
+  addressCity?: string | null;
+  addressState?: string | null;
+  addressPostalCode?: string | null;
+  addressCountry?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   relationshipStatus: "prospect" | "active" | "inactive" | "blocked";
   notes?: string | null;
 };
@@ -143,6 +153,8 @@ export async function listPartners(filters: {
         like(partners.displayName, `%${filters.search.trim()}%`),
         like(partners.legalName, `%${filters.search.trim()}%`),
         like(partners.email, `%${filters.search.trim()}%`),
+        like(partners.addressStreet, `%${filters.search.trim()}%`),
+        like(partners.addressCity, `%${filters.search.trim()}%`),
       )!,
     );
   }

@@ -1,5 +1,6 @@
 import {
   datetime,
+  decimal,
   index,
   int,
   mysqlEnum,
@@ -36,6 +37,16 @@ export const partners = mysqlTable(
     contactName: varchar("contactName", { length: 120 }),
     email: varchar("email", { length: 320 }),
     phone: varchar("phone", { length: 32 }),
+    addressStreet: varchar("addressStreet", { length: 200 }),
+    addressNumber: varchar("addressNumber", { length: 32 }),
+    addressComplement: varchar("addressComplement", { length: 120 }),
+    addressNeighborhood: varchar("addressNeighborhood", { length: 120 }),
+    addressCity: varchar("addressCity", { length: 120 }),
+    addressState: varchar("addressState", { length: 2 }),
+    addressPostalCode: varchar("addressPostalCode", { length: 16 }),
+    addressCountry: varchar("addressCountry", { length: 2 }).default("BR"),
+    latitude: decimal("latitude", { precision: 10, scale: 7, mode: "number" }),
+    longitude: decimal("longitude", { precision: 10, scale: 7, mode: "number" }),
     relationshipStatus: mysqlEnum("relationshipStatus", partnerStatusValues)
       .default("prospect")
       .notNull(),
