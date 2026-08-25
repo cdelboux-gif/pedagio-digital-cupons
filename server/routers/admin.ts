@@ -5,6 +5,10 @@ import {
   createCoupon,
   createEntity,
   createPartner,
+  deletePartner,
+  deleteCoupon,
+  deletePartnerStore,
+  deleteEntity,
   createPartnerStore,
   DatabaseUnavailableError,
   getCouponById,
@@ -34,9 +38,17 @@ import {
   uploadPartnerLogo,
   updateCouponStatus,
   updatePartner,
+  isPartnerInScope,
+  isStoreInScope,
+  isCouponInScope,
+  isLoginInviteInScope,
+  isAccessUserInScope,
+  isAccessTargetInScope,
+  scopeAllows,
+  type AccessScope,
 } from "../db";
 import { accessLevelValues, entityStatusValues, integrationEventValues, integrationStatusValues, storeStatusValues } from "../../drizzle/schema";
-import { adminProcedure, operationProcedure, router, superAdminProcedure, viewProcedure } from "../_core/trpc";
+import { moduleProcedure, router, superAdminProcedure } from "../_core/trpc";
 
 const partnerStatus = z.enum(["prospect", "active", "inactive", "blocked"]);
 const couponStatus = z.enum(["draft", "active", "paused", "ended"]);
@@ -144,24 +156,39 @@ function notFound(entity: string) {
   return new TRPCError({ code: "NOT_FOUND", message: `${entity} não encontrado(a)` });
 }
 
+function scopeOf(user: { role: "user" | "admin"; accessLevel: "admin" | "manager" | "operator" | "viewer"; entityId: number | null; partnerId: number | null; storeId: number | null }): AccessScope {
+  return { role: user.role, accessLevel: user.accessLevel, entityId: user.entityId, partnerId: user.partnerId, storeId: user.storeId };
+}
+
+function forbiddenScope() {
+  return new TRPCError({ code: "FORBIDDEN", message: "Você não possui escopo para este registro" });
+}
+
 export const adminRouter = router({
-  dashboard: viewProcedure.query(async () => getDashboardSummary()),
+  dashboard: moduleProcedure("dashboard", "read").query(({ ctx }) => getDashboardSummary(scopeOf(ctx.user))),
 
   partners: router({
-    list: viewProcedure
+    list: moduleProcedure("partners", "read")
       .input(z.object({ search: z.string().trim().max(160).optional(), status: partnerStatus.optional() }).optional())
-      .query(({ input }) => listPartners(input ?? {})),
-    create: adminProcedure.input(partnerInput).mutation(async ({ input }) => {
+      .query(({ input, ctx }) => listPartners({ ...(input ?? {}), scope: scopeOf(ctx.user) })),
+    create: moduleProcedure("partners", "create").input(partnerInput).mutation(async ({ input, ctx }) => {
       const { logo, ...data } = input;
+      if (!scopeAllows(scopeOf(ctx.user), { entityId: data.entityId ?? null }, true)) throw forbiddenScope();
       const partner = await createPartner(data);
       if (!partner) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar o parceiro" });
       const saved = logo ? await uploadPartnerLogo(partner.id, logo) : partner;
       return saved ? publicPartner(saved) : saved;
     }),
-    update: adminProcedure
+    remove: moduleProcedure("partners", "delete").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+      if (!(await isPartnerInScope(input.id, scopeOf(ctx.user), true))) throw forbiddenScope();
+      return deletePartner(input.id);
+    }),
+    update: moduleProcedure("partners", "update")
       .input(z.object({ id: z.number().int().positive(), data: partnerInput }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         if (!(await getPartnerById(input.id))) throw notFound("Parceiro");
+        if (!(await isPartnerInScope(input.id, scopeOf(ctx.user), true))) throw forbiddenScope();
+        if (!scopeAllows(scopeOf(ctx.user), { entityId: input.data.entityId ?? null, partnerId: input.id }, true)) throw forbiddenScope();
         const { logo, ...data } = input.data;
         await updatePartner(input.id, data);
         const saved = logo ? await uploadPartnerLogo(input.id, logo) : await getPartnerById(input.id);
@@ -170,7 +197,7 @@ export const adminRouter = router({
   }),
 
   coupons: router({
-    list: viewProcedure
+    list: moduleProcedure("coupons", "read")
       .input(
         z
           .object({
@@ -182,9 +209,11 @@ export const adminRouter = router({
           })
           .optional(),
       )
-      .query(({ input }) => listCoupons(input ?? {})),
-    create: operationProcedure.input(couponInput).mutation(async ({ input }) => {
+      .query(({ input, ctx }) => listCoupons({ ...(input ?? {}), scope: scopeOf(ctx.user) })),
+    create: moduleProcedure("coupons", "create").input(couponInput).mutation(async ({ input, ctx }) => {
       if (!(await getPartnerById(input.partnerId))) throw notFound("Parceiro");
+      if (!(await isPartnerInScope(input.partnerId, scopeOf(ctx.user), true))) throw forbiddenScope();
+      if (input.storeId && !(await isStoreInScope(input.storeId, scopeOf(ctx.user), true))) throw forbiddenScope();
       if (input.storeId) {
         const store = await getPartnerStoreById(input.storeId);
         if (!store || store.partnerId !== input.partnerId) throw new TRPCError({ code: "BAD_REQUEST", message: "A loja precisa pertencer ao parceiro selecionado" });
@@ -195,11 +224,14 @@ export const adminRouter = router({
       const saved = itemImage ? await uploadCouponItemImage(coupon.id, itemImage) : coupon;
       return saved ? publicCoupon(saved) : saved;
     }),
-    update: operationProcedure
+    update: moduleProcedure("coupons", "update")
       .input(z.object({ id: z.number().int().positive(), data: couponInput }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         if (!(await getCouponById(input.id))) throw notFound("Cupom");
+        if (!(await isCouponInScope(input.id, scopeOf(ctx.user), true))) throw forbiddenScope();
         if (!(await getPartnerById(input.data.partnerId))) throw notFound("Parceiro");
+        if (!(await isPartnerInScope(input.data.partnerId, scopeOf(ctx.user), true))) throw forbiddenScope();
+        if (input.data.storeId && !(await isStoreInScope(input.data.storeId, scopeOf(ctx.user), true))) throw forbiddenScope();
         if (input.data.storeId) {
           const store = await getPartnerStoreById(input.data.storeId);
           if (!store || store.partnerId !== input.data.partnerId) throw new TRPCError({ code: "BAD_REQUEST", message: "A loja precisa pertencer ao parceiro selecionado" });
@@ -209,17 +241,22 @@ export const adminRouter = router({
         const saved = itemImage ? await uploadCouponItemImage(input.id, itemImage) : await getCouponById(input.id);
         return saved ? publicCoupon(saved) : saved;
       }),
-    updateStatus: operationProcedure
+    remove: moduleProcedure("coupons", "delete").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+      if (!(await isCouponInScope(input.id, scopeOf(ctx.user), true))) throw forbiddenScope();
+      return deleteCoupon(input.id);
+    }),
+    updateStatus: moduleProcedure("coupons", "status")
       .input(z.object({ id: z.number().int().positive(), status: couponStatus }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         if (!(await getCouponById(input.id))) throw notFound("Cupom");
+        if (!(await isCouponInScope(input.id, scopeOf(ctx.user), true))) throw forbiddenScope();
         return updateCouponStatus(input.id, input.status);
       }),
   }),
 
   integrations: router({
-    list: viewProcedure.query(() => listPartnerIntegrations()),
-    create: adminProcedure.input(integrationInput).mutation(async ({ input, ctx }) => {
+    list: moduleProcedure("integrations", "read").query(() => listPartnerIntegrations()),
+    create: moduleProcedure("integrations", "manage").input(integrationInput).mutation(async ({ input, ctx }) => {
       if (!(await getPartnerById(input.partnerId))) throw notFound("Parceiro");
       try {
         return await createPartnerIntegration({ ...input, createdByUserId: ctx.user.id });
@@ -233,29 +270,41 @@ export const adminRouter = router({
   }),
 
   entities: router({
-    list: viewProcedure.query(() => listEntities()),
-    create: adminProcedure.input(entityInput).mutation(({ input }) => createEntity(input)),
+    list: moduleProcedure("entities", "read").query(({ ctx }) => listEntities(scopeOf(ctx.user))),
+    create: moduleProcedure("entities", "manage").input(entityInput).mutation(({ input }) => createEntity(input)),
+    remove: moduleProcedure("entities", "delete").input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => deleteEntity(input.id)),
   }),
 
   stores: router({
-    list: viewProcedure.input(z.object({ partnerId: z.number().int().positive().optional() }).optional()).query(({ input }) => listPartnerStores(input?.partnerId)),
-    create: adminProcedure.input(storeInput).mutation(async ({ input }) => {
+    list: moduleProcedure("stores", "read").input(z.object({ partnerId: z.number().int().positive().optional() }).optional()).query(({ input, ctx }) => listPartnerStores(input?.partnerId, scopeOf(ctx.user))),
+    create: moduleProcedure("stores", "create").input(storeInput).mutation(async ({ input, ctx }) => {
       if (!(await getPartnerById(input.partnerId))) throw notFound("Parceiro");
+      if (!(await isPartnerInScope(input.partnerId, scopeOf(ctx.user), true))) throw forbiddenScope();
       return createPartnerStore(input);
     }),
-    update: adminProcedure.input(z.object({ id: z.number().int().positive(), data: storeInput })).mutation(async ({ input }) => {
+    remove: moduleProcedure("stores", "delete").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+      if (!(await isStoreInScope(input.id, scopeOf(ctx.user), true))) throw forbiddenScope();
+      return deletePartnerStore(input.id);
+    }),
+    update: moduleProcedure("stores", "update").input(z.object({ id: z.number().int().positive(), data: storeInput })).mutation(async ({ input, ctx }) => {
       if (!(await getPartnerStoreById(input.id))) throw notFound("Loja");
+      if (!(await isStoreInScope(input.id, scopeOf(ctx.user), true))) throw forbiddenScope();
       if (!(await getPartnerById(input.data.partnerId))) throw notFound("Parceiro");
+      if (!(await isPartnerInScope(input.data.partnerId, scopeOf(ctx.user), true))) throw forbiddenScope();
       return updatePartnerStore(input.id, input.data);
     }),
   }),
 
   access: router({
-    list: superAdminProcedure.query(() => listAccessUsers()),
-    update: superAdminProcedure.input(z.object({ id: z.number().int().positive(), data: userAccessInput })).mutation(({ input }) => updateUserAccess(input.id, input.data)),
+    list: moduleProcedure("access", "manage").query(({ ctx }) => listAccessUsers(scopeOf(ctx.user))),
+    update: moduleProcedure("access", "manage").input(z.object({ id: z.number().int().positive(), data: userAccessInput })).mutation(async ({ input, ctx }) => {
+      const updated = await updateUserAccess(input.id, input.data, scopeOf(ctx.user));
+      if (!updated) throw forbiddenScope();
+      return updated;
+    }),
     invites: router({
-      list: superAdminProcedure.query(() => listLoginInvites()),
-      create: superAdminProcedure.input(z.object({
+      list: moduleProcedure("access", "manage").query(({ ctx }) => listLoginInvites(scopeOf(ctx.user))),
+      create: moduleProcedure("access", "manage").input(z.object({
         email: z.string().trim().email().max(320),
         accessLevel,
         entityId: nullableId,
@@ -264,6 +313,7 @@ export const adminRouter = router({
         expiresInDays: z.number().int().min(1).max(30).default(7),
         origin: z.string().url(),
       })).mutation(async ({ input, ctx }) => {
+        if (!(await isAccessTargetInScope({ entityId: input.entityId ?? null, partnerId: input.partnerId ?? null, storeId: input.storeId ?? null }, scopeOf(ctx.user)))) throw forbiddenScope();
         if (input.storeId) {
           const store = await getPartnerStoreById(input.storeId);
           if (!store || (input.partnerId && store.partnerId !== input.partnerId)) throw new TRPCError({ code: "BAD_REQUEST", message: "A loja precisa pertencer ao parceiro selecionado" });
@@ -272,13 +322,18 @@ export const adminRouter = router({
         if (!created) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar o convite" });
         return { ...created.invite, inviteUrl: `${input.origin.replace(/\/$/, "")}/convite?token=${encodeURIComponent(created.token)}` };
       }),
-      resend: superAdminProcedure.input(z.object({ id: z.number().int().positive(), origin: z.string().url() })).mutation(async ({ input, ctx }) => {
+      resend: moduleProcedure("access", "manage").input(z.object({ id: z.number().int().positive(), origin: z.string().url() })).mutation(async ({ input, ctx }) => {
+        if (!(await isLoginInviteInScope(input.id, scopeOf(ctx.user)))) throw forbiddenScope();
         const created = await resendLoginInvite(input.id, ctx.user.id);
         if (!created) throw new TRPCError({ code: "NOT_FOUND", message: "Convite não encontrado" });
         return { ...created.invite, inviteUrl: `${input.origin.replace(/\/$/, "")}/convite?token=${encodeURIComponent(created.token)}` };
       }),
-      revoke: superAdminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => revokeLoginInvite(input.id)),
-      activate: superAdminProcedure.input(z.object({ id: z.number().int().positive(), userId: z.number().int().positive() })).mutation(async ({ input }) => {
+      revoke: moduleProcedure("access", "manage").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+        if (!(await isLoginInviteInScope(input.id, scopeOf(ctx.user)))) throw forbiddenScope();
+        return revokeLoginInvite(input.id);
+      }),
+      activate: moduleProcedure("access", "manage").input(z.object({ id: z.number().int().positive(), userId: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+        if (!(await isLoginInviteInScope(input.id, scopeOf(ctx.user)))) throw forbiddenScope();
         const activated = await activateLoginInvite(input.id, input.userId);
         if (!activated) throw new TRPCError({ code: "BAD_REQUEST", message: "O e-mail do usuário não corresponde ao convite ou o convite não está mais disponível" });
         return activated;
@@ -287,7 +342,7 @@ export const adminRouter = router({
   }),
 
   uses: router({
-    list: viewProcedure
+    list: moduleProcedure("uses", "read")
       .input(
         z
           .object({
@@ -300,8 +355,8 @@ export const adminRouter = router({
           })
           .optional(),
       )
-      .query(({ input }) => listCouponUses(input ?? {})),
-    register: operationProcedure
+      .query(({ input, ctx }) => listCouponUses({ ...(input ?? {}), scope: scopeOf(ctx.user) })),
+    register: moduleProcedure("uses", "create")
       .input(
         z.object({
           couponId: z.number().int().positive(),
@@ -315,6 +370,12 @@ export const adminRouter = router({
       .mutation(async ({ input, ctx }) => {
         const coupon = await getCouponById(input.couponId);
         if (!coupon) throw notFound("Cupom");
+        if (!(await isCouponInScope(input.couponId, scopeOf(ctx.user), true))) throw forbiddenScope();
+        if (input.storeId && !(await isStoreInScope(input.storeId, scopeOf(ctx.user), true))) throw forbiddenScope();
+        if (input.storeId) {
+          const store = await getPartnerStoreById(input.storeId);
+          if (!store || store.partnerId !== coupon.partnerId) throw new TRPCError({ code: "BAD_REQUEST", message: "A loja precisa pertencer ao parceiro do cupom" });
+        }
         if (coupon.status !== "active") {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Apenas cupons ativos podem registrar utilizações" });
         }

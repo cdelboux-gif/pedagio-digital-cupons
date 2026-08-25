@@ -27,16 +27,17 @@ import { Activity, Boxes, Handshake, LayoutDashboard, LogOut, PanelLeft, ShieldC
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
+import { visibleModules, type PermissionModule } from "@shared/permissions";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "Visão geral", path: "/" },
-  { icon: Handshake, label: "Parceiros", path: "/parceiros" },
-  { icon: TicketPercent, label: "Cupons", path: "/cupons" },
-  { icon: Activity, label: "Utilizações", path: "/utilizacoes" },
-  { icon: Store, label: "Lojas", path: "/lojas" },
-  { icon: Boxes, label: "Entidades", path: "/entidades" },
-  { icon: Webhook, label: "Integrações", path: "/integracoes" },
-  { icon: UserCog, label: "Acessos", path: "/acessos", adminOnly: true },
+const menuItems: Array<{ icon: typeof LayoutDashboard; label: string; path: string; module: PermissionModule }> = [
+  { icon: LayoutDashboard, label: "Visão geral", path: "/", module: "dashboard" },
+  { icon: Handshake, label: "Parceiros", path: "/parceiros", module: "partners" },
+  { icon: TicketPercent, label: "Cupons", path: "/cupons", module: "coupons" },
+  { icon: Activity, label: "Utilizações", path: "/utilizacoes", module: "uses" },
+  { icon: Store, label: "Lojas", path: "/lojas", module: "stores" },
+  { icon: Boxes, label: "Entidades", path: "/entidades", module: "entities" },
+  { icon: Webhook, label: "Integrações", path: "/integracoes", module: "integrations" },
+  { icon: UserCog, label: "Acessos", path: "/acessos", module: "access" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "pedagio-sidebar-width";
@@ -137,7 +138,8 @@ function DashboardLayoutContent({
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-  const visibleMenuItems = menuItems.filter(item => !item.adminOnly || user?.role === "admin" || user?.accessLevel === "admin");
+  const effectiveLevel = user?.role === "admin" ? "admin" : user?.accessLevel;
+  const visibleMenuItems = menuItems.filter(item => visibleModules(effectiveLevel as "admin" | "manager" | "operator" | "viewer").includes(item.module));
   const activeMenuItem = visibleMenuItems.find(item => item.path === location) ?? visibleMenuItems[0];
 
   useEffect(() => {

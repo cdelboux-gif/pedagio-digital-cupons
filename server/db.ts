@@ -10,9 +10,11 @@ import {
   lt,
   lte,
   or,
+  isNull,
   sql,
   type SQL,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/mysql-core";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   couponUses,
@@ -30,6 +32,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { storagePut } from "./storage";
+import type { AccessLevel } from "../shared/permissions";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -135,6 +138,21 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
 }
 
+export type AccessScope = { role: "user" | "admin"; accessLevel: AccessLevel; entityId: number | null; partnerId: number | null; storeId: number | null };
+
+export function isGlobalScope(scope: AccessScope) {
+  return scope.role === "admin" || (!scope.entityId && !scope.partnerId && !scope.storeId);
+}
+
+export function scopeAllows(scope: AccessScope, target: { entityId?: number | null; partnerId?: number | null; storeId?: number | null }, mutation = false) {
+  if (scope.role === "admin") return true;
+  if (scope.entityId && target.entityId !== scope.entityId) return false;
+  if (scope.partnerId && target.partnerId !== scope.partnerId) return false;
+  if (scope.storeId && target.storeId !== scope.storeId) return false;
+  if (mutation && scope.storeId && !target.storeId) return false;
+  return true;
+}
+
 export async function getUserByOpenId(openId: string) {
   const db = await requireDb();
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
@@ -180,10 +198,15 @@ type CouponInput = {
 export async function listPartners(filters: {
   search?: string;
   status?: "prospect" | "active" | "inactive" | "blocked";
+  scope?: AccessScope;
 }) {
   const db = await requireDb();
   const conditions: SQL[] = [];
   if (filters.status) conditions.push(eq(partners.relationshipStatus, filters.status));
+  if (filters.scope && !isGlobalScope(filters.scope)) {
+    if (filters.scope.entityId) conditions.push(eq(partners.entityId, filters.scope.entityId));
+    if (filters.scope.partnerId) conditions.push(eq(partners.id, filters.scope.partnerId));
+  }
   if (filters.search?.trim()) {
     conditions.push(
       or(
@@ -201,6 +224,28 @@ export async function listPartners(filters: {
     .from(partners)
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(desc(partners.updatedAt));
+}
+
+export async function isPartnerInScope(id: number, scope: AccessScope, mutation = false) {
+  if (isGlobalScope(scope)) return true;
+  const partner = await getPartnerById(id);
+  return !!partner && scopeAllows(scope, { entityId: partner.entityId, partnerId: partner.id }, mutation);
+}
+
+export async function isStoreInScope(id: number, scope: AccessScope, mutation = false) {
+  if (isGlobalScope(scope)) return true;
+  const store = await getPartnerStoreById(id);
+  if (!store) return false;
+  const partner = await getPartnerById(store.partnerId);
+  return !!partner && scopeAllows(scope, { entityId: partner.entityId, partnerId: partner.id, storeId: store.id }, mutation);
+}
+
+export async function isCouponInScope(id: number, scope: AccessScope, mutation = false) {
+  if (isGlobalScope(scope)) return true;
+  const coupon = await getCouponById(id);
+  if (!coupon) return false;
+  const partner = await getPartnerById(coupon.partnerId);
+  return !!partner && scopeAllows(scope, { entityId: partner?.entityId, partnerId: coupon.partnerId, storeId: coupon.storeId }, mutation);
 }
 
 export async function getPartnerById(id: number) {
@@ -223,6 +268,12 @@ export async function createPartner(input: PartnerInput) {
 export async function updatePartner(id: number, input: PartnerInput) {
   const db = await requireDb();
   await db.update(partners).set(input).where(eq(partners.id, id));
+  return getPartnerById(id);
+}
+
+export async function deletePartner(id: number) {
+  const db = await requireDb();
+  await db.update(partners).set({ relationshipStatus: "blocked" }).where(eq(partners.id, id));
   return getPartnerById(id);
 }
 
@@ -287,9 +338,9 @@ export async function uploadCouponItemImage(id: number, input: ImageUploadInput)
   return getCouponById(id);
 }
 
-export async function listEntities() {
+export async function listEntities(scope?: AccessScope) {
   const db = await requireDb();
-  return db.select().from(entities).orderBy(desc(entities.updatedAt));
+  return db.select().from(entities).where(scope && !isGlobalScope(scope) && scope.entityId ? eq(entities.id, scope.entityId) : undefined).orderBy(desc(entities.updatedAt));
 }
 
 export async function createEntity(input: EntityInput) {
@@ -299,9 +350,23 @@ export async function createEntity(input: EntityInput) {
   return rows[0];
 }
 
-export async function listPartnerStores(partnerId?: number) {
+export async function deleteEntity(id: number) {
   const db = await requireDb();
-  return db.select({ store: partnerStores, partnerName: partners.displayName }).from(partnerStores).innerJoin(partners, eq(partners.id, partnerStores.partnerId)).where(partnerId ? eq(partnerStores.partnerId, partnerId) : undefined).orderBy(desc(partnerStores.updatedAt));
+  await db.update(entities).set({ status: "inactive" }).where(eq(entities.id, id));
+  const rows = await db.select().from(entities).where(eq(entities.id, id)).limit(1);
+  return rows[0];
+}
+
+export async function listPartnerStores(partnerId?: number, scope?: AccessScope) {
+  const db = await requireDb();
+  const conditions: SQL[] = [];
+  if (partnerId) conditions.push(eq(partnerStores.partnerId, partnerId));
+  if (scope && !isGlobalScope(scope)) {
+    if (scope.entityId) conditions.push(eq(partners.entityId, scope.entityId));
+    if (scope.partnerId) conditions.push(eq(partnerStores.partnerId, scope.partnerId));
+    if (scope.storeId) conditions.push(eq(partnerStores.id, scope.storeId));
+  }
+  return db.select({ store: partnerStores, partnerName: partners.displayName }).from(partnerStores).innerJoin(partners, eq(partners.id, partnerStores.partnerId)).where(conditions.length ? and(...conditions) : undefined).orderBy(desc(partnerStores.updatedAt));
 }
 
 export async function getPartnerStoreById(id: number) {
@@ -319,6 +384,12 @@ export async function createPartnerStore(input: StoreInput) {
 export async function updatePartnerStore(id: number, input: StoreInput) {
   const db = await requireDb();
   await db.update(partnerStores).set(input).where(eq(partnerStores.id, id));
+  return getPartnerStoreById(id);
+}
+
+export async function deletePartnerStore(id: number) {
+  const db = await requireDb();
+  await db.update(partnerStores).set({ status: "inactive" }).where(eq(partnerStores.id, id));
   return getPartnerStoreById(id);
 }
 
@@ -377,15 +448,30 @@ export async function getPendingLoginInvite(email: string, token: string) {
   return rows[0] ?? null;
 }
 
-export async function listLoginInvites() {
+export async function listLoginInvites(scope?: AccessScope) {
   const db = await requireDb();
-  const rows = await db.select().from(loginInvites).orderBy(desc(loginInvites.createdAt));
+  const conditions: SQL[] = [];
+  if (scope && !isGlobalScope(scope)) {
+    if (scope.entityId) conditions.push(eq(loginInvites.entityId, scope.entityId));
+    if (scope.partnerId) conditions.push(eq(loginInvites.partnerId, scope.partnerId));
+    if (scope.storeId) conditions.push(eq(loginInvites.storeId, scope.storeId));
+  }
+  const rows = await db.select().from(loginInvites).where(conditions.length ? and(...conditions) : undefined).orderBy(desc(loginInvites.createdAt));
   const now = new Date();
   const expired = rows.filter(row => row.status === "pending" && row.expiresAt <= now).map(row => row.id);
   if (expired.length) {
     await db.update(loginInvites).set({ status: "expired" }).where(sql`${loginInvites.id} in (${sql.join(expired.map(id => sql`${id}`), sql`, `)})`);
   }
   return rows.map(row => expired.includes(row.id) ? publicLoginInvite({ ...row, status: "expired" }) : publicLoginInvite(row));
+}
+
+export async function isLoginInviteInScope(id: number, scope: AccessScope) {
+  if (isGlobalScope(scope)) return true;
+  const invite = await getLoginInviteById(id);
+  if (!invite) return false;
+  if (invite.storeId) return isStoreInScope(invite.storeId, scope);
+  if (invite.partnerId) return isPartnerInScope(invite.partnerId, scope);
+  return !scope.entityId || invite.entityId === scope.entityId;
 }
 
 export async function resendLoginInvite(id: number, invitedByUserId: number) {
@@ -425,15 +511,41 @@ export async function revokeLoginInvite(id: number) {
   return rows[0] ? publicLoginInvite(rows[0]) : null;
 }
 
-export async function listAccessUsers() {
+const storePartner = alias(partners, "store_partner");
+
+export async function listAccessUsers(scope?: AccessScope) {
   const db = await requireDb();
-  return db.select({ id: users.id, name: users.name, email: users.email, role: users.role, accessLevel: users.accessLevel, entityId: users.entityId, partnerId: users.partnerId, storeId: users.storeId, updatedAt: users.updatedAt }).from(users).orderBy(desc(users.updatedAt));
+  const conditions: SQL[] = [];
+  if (scope && !isGlobalScope(scope)) {
+    if (scope.entityId) conditions.push(or(eq(users.entityId, scope.entityId), eq(partners.entityId, scope.entityId), eq(storePartner.entityId, scope.entityId))!);
+    if (scope.partnerId) conditions.push(or(eq(users.partnerId, scope.partnerId), eq(partnerStores.partnerId, scope.partnerId))!);
+    if (scope.storeId) conditions.push(eq(users.storeId, scope.storeId));
+  }
+  return db.select({ id: users.id, name: users.name, email: users.email, role: users.role, accessLevel: users.accessLevel, entityId: users.entityId, partnerId: users.partnerId, storeId: users.storeId, updatedAt: users.updatedAt }).from(users).leftJoin(partners, eq(users.partnerId, partners.id)).leftJoin(partnerStores, eq(users.storeId, partnerStores.id)).leftJoin(storePartner, eq(partnerStores.partnerId, storePartner.id)).where(conditions.length ? and(...conditions) : undefined).orderBy(desc(users.updatedAt));
 }
 
-export async function updateUserAccess(id: number, input: { accessLevel: "admin" | "manager" | "operator" | "viewer"; entityId?: number | null; partnerId?: number | null; storeId?: number | null }) {
+export async function isAccessUserInScope(id: number, scope: AccessScope) {
+  if (isGlobalScope(scope)) return true;
   const db = await requireDb();
+  const rows = await db.select({ entityId: users.entityId, partnerId: users.partnerId, storeId: users.storeId, partnerEntityId: partners.entityId, storePartnerId: partnerStores.partnerId, storePartnerEntityId: storePartner.entityId }).from(users).leftJoin(partners, eq(users.partnerId, partners.id)).leftJoin(partnerStores, eq(users.storeId, partnerStores.id)).leftJoin(storePartner, eq(partnerStores.partnerId, storePartner.id)).where(eq(users.id, id)).limit(1);
+  const row = rows[0];
+  if (!row) return false;
+  return scopeAllows(scope, { entityId: row.entityId ?? row.partnerEntityId ?? row.storePartnerEntityId, partnerId: row.partnerId ?? row.storePartnerId, storeId: row.storeId });
+}
+
+export async function isAccessTargetInScope(target: { entityId?: number | null; partnerId?: number | null; storeId?: number | null }, scope: AccessScope) {
+  if (isGlobalScope(scope)) return true;
+  if (target.storeId) return isStoreInScope(target.storeId, scope, true);
+  if (target.partnerId) return isPartnerInScope(target.partnerId, scope, true);
+  return !scope.entityId || target.entityId === scope.entityId;
+}
+
+export async function updateUserAccess(id: number, input: { accessLevel: "admin" | "manager" | "operator" | "viewer"; entityId?: number | null; partnerId?: number | null; storeId?: number | null }, scope?: AccessScope) {
+  const db = await requireDb();
+  if (scope && !(await isAccessUserInScope(id, scope))) return null;
+  if (scope && !(await isAccessTargetInScope({ entityId: input.entityId ?? null, partnerId: input.partnerId ?? null, storeId: input.storeId ?? null }, scope))) return null;
   await db.update(users).set(input).where(eq(users.id, id));
-  const rows = await listAccessUsers();
+  const rows = await listAccessUsers(scope);
   return rows.find(user => user.id === id);
 }
 
@@ -514,12 +626,18 @@ export async function listCoupons(filters: {
   storeId?: number;
   status?: "draft" | "active" | "paused" | "ended";
   validity?: "current" | "upcoming" | "expired";
+  scope?: AccessScope;
 }) {
   const db = await requireDb();
   const now = new Date();
   const conditions: SQL[] = [];
   if (filters.partnerId) conditions.push(eq(coupons.partnerId, filters.partnerId));
   if (filters.storeId) conditions.push(eq(coupons.storeId, filters.storeId));
+  if (filters.scope && !isGlobalScope(filters.scope)) {
+    if (filters.scope.entityId) conditions.push(eq(partners.entityId, filters.scope.entityId));
+    if (filters.scope.partnerId) conditions.push(eq(coupons.partnerId, filters.scope.partnerId));
+    if (filters.scope.storeId) conditions.push(or(eq(coupons.storeId, filters.scope.storeId), isNull(coupons.storeId))!);
+  }
   if (filters.status) conditions.push(eq(coupons.status, filters.status));
   if (filters.search?.trim()) {
     conditions.push(
@@ -595,6 +713,10 @@ export async function updateCouponStatus(
   return getCouponById(id);
 }
 
+export async function deleteCoupon(id: number) {
+  return updateCouponStatus(id, "ended");
+}
+
 export async function listCouponUses(filters: {
   couponId?: number;
   partnerId?: number;
@@ -602,12 +724,18 @@ export async function listCouponUses(filters: {
   search?: string;
   startsAt?: Date;
   endsAt?: Date;
+  scope?: AccessScope;
 }) {
   const db = await requireDb();
   const conditions: SQL[] = [];
   if (filters.couponId) conditions.push(eq(couponUses.couponId, filters.couponId));
   if (filters.partnerId) conditions.push(eq(couponUses.partnerId, filters.partnerId));
   if (filters.storeId) conditions.push(eq(couponUses.storeId, filters.storeId));
+  if (filters.scope && !isGlobalScope(filters.scope)) {
+    if (filters.scope.entityId) conditions.push(eq(partners.entityId, filters.scope.entityId));
+    if (filters.scope.partnerId) conditions.push(eq(couponUses.partnerId, filters.scope.partnerId));
+    if (filters.scope.storeId) conditions.push(eq(couponUses.storeId, filters.scope.storeId));
+  }
   if (filters.startsAt) conditions.push(gte(couponUses.usedAt, filters.startsAt));
   if (filters.endsAt) conditions.push(lte(couponUses.usedAt, filters.endsAt));
   if (filters.search?.trim()) {
@@ -697,26 +825,27 @@ export async function registerCouponUse(input: {
   });
 }
 
-export async function getDashboardSummary() {
+export async function getDashboardSummary(scope?: AccessScope) {
   const db = await requireDb();
   const now = new Date();
   const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-  const [partnerTotal, activeCouponTotal, expiringCouponTotal, useTotal, recentUses] = await Promise.all([
-    db.select({ value: count() }).from(partners),
-    db.select({ value: count() }).from(coupons).where(eq(coupons.status, "active")),
-    db
-      .select({ value: count() })
-      .from(coupons)
-      .where(and(eq(coupons.status, "active"), gte(coupons.endsAt, now), lte(coupons.endsAt, nextWeek))),
-    db.select({ value: count() }).from(couponUses),
-    listCouponUses({}),
+  const [scopedPartners, scopedCoupons, scopedUses] = await Promise.all([
+    listPartners({ scope }),
+    listCoupons({ status: "active", scope }),
+    listCouponUses({ scope }),
   ]);
+  const expiringCoupons = scopedCoupons.filter(coupon => coupon.endsAt >= now && coupon.endsAt <= nextWeek);
+  const partnerTotal = scopedPartners.length;
+  const activeCouponTotal = scopedCoupons.length;
+  const expiringCouponTotal = expiringCoupons.length;
+  const useTotal = scopedUses.length;
+  const recentUses = scopedUses;
 
   return {
-    partners: partnerTotal[0]?.value ?? 0,
-    activeCoupons: activeCouponTotal[0]?.value ?? 0,
-    expiringCoupons: expiringCouponTotal[0]?.value ?? 0,
-    registeredUses: useTotal[0]?.value ?? 0,
+    partners: partnerTotal,
+    activeCoupons: activeCouponTotal,
+    expiringCoupons: expiringCouponTotal,
+    registeredUses: useTotal,
     recentUses: recentUses.slice(0, 5),
   };
 }

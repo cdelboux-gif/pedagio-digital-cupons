@@ -1,5 +1,6 @@
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
+import { canAccess, type PermissionAction, type PermissionModule } from "@shared/permissions";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
 
@@ -7,6 +8,12 @@ type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
   redirectPath?: string;
 };
+
+export function usePermissions() {
+  const auth = useAuth();
+  const level = auth.user?.role === "admin" ? "admin" : auth.user?.accessLevel;
+  return { ...auth, can: (module: PermissionModule, action: PermissionAction = "read") => canAccess(level, module, action) };
+}
 
 export function useAuth(options?: UseAuthOptions) {
   // Login is started via startLogin() in the effect below, only when we actually

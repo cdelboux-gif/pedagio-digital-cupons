@@ -19,6 +19,20 @@ vi.mock("./db", async importOriginal => {
     createPartner: vi.fn(),
     uploadPartnerLogo: vi.fn(),
     uploadCouponItemImage: vi.fn(),
+    updatePartner: vi.fn(),
+    deletePartner: vi.fn(),
+    deletePartnerStore: vi.fn(),
+    deleteCoupon: vi.fn(),
+    isPartnerInScope: vi.fn(),
+    isStoreInScope: vi.fn(),
+    isAccessTargetInScope: vi.fn(),
+    isLoginInviteInScope: vi.fn(),
+    listAccessUsers: vi.fn(),
+    listLoginInvites: vi.fn(),
+    updateUserAccess: vi.fn(),
+    resendLoginInvite: vi.fn(),
+    revokeLoginInvite: vi.fn(),
+    activateLoginInvite: vi.fn(),
   };
 });
 
@@ -40,6 +54,20 @@ const registerCouponUse = vi.mocked(db.registerCouponUse);
 const createPartner = vi.mocked(db.createPartner);
 const uploadPartnerLogo = vi.mocked(db.uploadPartnerLogo);
 const uploadCouponItemImage = vi.mocked(db.uploadCouponItemImage);
+const updatePartner = vi.mocked(db.updatePartner);
+const deletePartner = vi.mocked(db.deletePartner);
+const deletePartnerStore = vi.mocked(db.deletePartnerStore);
+const deleteCoupon = vi.mocked(db.deleteCoupon);
+const isPartnerInScope = vi.mocked(db.isPartnerInScope);
+const isStoreInScope = vi.mocked(db.isStoreInScope);
+const isAccessTargetInScope = vi.mocked(db.isAccessTargetInScope);
+const isLoginInviteInScope = vi.mocked(db.isLoginInviteInScope);
+const listAccessUsers = vi.mocked(db.listAccessUsers);
+const listLoginInvites = vi.mocked(db.listLoginInvites);
+const updateUserAccess = vi.mocked(db.updateUserAccess);
+const resendLoginInvite = vi.mocked(db.resendLoginInvite);
+const revokeLoginInvite = vi.mocked(db.revokeLoginInvite);
+const activateLoginInvite = vi.mocked(db.activateLoginInvite);
 
 function context(accessLevel: "admin" | "manager" | "operator" | "viewer" = "admin"): TrpcContext {
   return {
@@ -70,6 +98,20 @@ beforeEach(() => {
   listCoupons.mockResolvedValue([]);
   listCouponUses.mockResolvedValue([]);
   registerCouponUse.mockResolvedValue(99);
+  updatePartner.mockResolvedValue(partner);
+  deletePartner.mockResolvedValue(partner);
+  deletePartnerStore.mockResolvedValue({ ...store, status: "inactive" });
+  deleteCoupon.mockResolvedValue({ ...coupon, status: "ended" });
+  isPartnerInScope.mockResolvedValue(true);
+  isStoreInScope.mockResolvedValue(true);
+  isAccessTargetInScope.mockResolvedValue(true);
+  isLoginInviteInScope.mockResolvedValue(true);
+  listAccessUsers.mockResolvedValue([]);
+  listLoginInvites.mockResolvedValue([]);
+  updateUserAccess.mockResolvedValue({ id: 9, name: "Gestor", email: "gestor@example.com", role: "user", accessLevel: "manager", entityId: 1, partnerId: 4, storeId: 12, updatedAt: new Date() });
+  resendLoginInvite.mockResolvedValue({ invite: { id: 8, email: "gestor@example.com", status: "pending", accessLevel: "manager", entityId: 1, partnerId: 4, storeId: 12, expiresAt: new Date(Date.now() + 86400000), createdAt: new Date() }, token: "token" });
+  revokeLoginInvite.mockResolvedValue({ id: 8, status: "revoked" });
+  activateLoginInvite.mockResolvedValue({ id: 8, status: "accepted" });
 });
 
 describe("admin structure procedures", () => {
@@ -85,7 +127,7 @@ describe("admin structure procedures", () => {
   it("lists stores with a partner filter and creates a store for an existing partner", async () => {
     const caller = appRouter.createCaller(context("manager"));
     await caller.admin.stores.list({ partnerId: 4 });
-    expect(listPartnerStores).toHaveBeenCalledWith(4);
+    expect(listPartnerStores).toHaveBeenCalledWith(4, expect.objectContaining({ accessLevel: "manager", partnerId: null, storeId: null }));
 
     await caller.admin.stores.create({ partnerId: 4, name: "Unidade Centro", code: "centro", status: "active", addressCountry: "BR", latitude: null, longitude: null });
     expect(createPartnerStore).toHaveBeenCalledWith(expect.objectContaining({ partnerId: 4, code: "CENTRO" }));
@@ -116,6 +158,42 @@ describe("admin structure procedures", () => {
 
     await expect(caller.admin.uses.register({ couponId: 21, storeId: 12, reference: "USE-21", usedAt: new Date("2026-08-15") })).rejects.toMatchObject<Partial<TRPCError>>({ code: "BAD_REQUEST" });
     expect(registerCouponUse).not.toHaveBeenCalled();
+  });
+
+  it("enforces cross-scope guards on partner, store and access mutations", async () => {
+    const scopedCaller = appRouter.createCaller({ ...context("manager"), user: { ...context("manager").user!, partnerId: 4 } });
+    isPartnerInScope.mockResolvedValue(false);
+    await expect(scopedCaller.admin.partners.update({ id: 4, data: { displayName: "Fora do escopo", relationshipStatus: "active" } })).rejects.toMatchObject<Partial<TRPCError>>({ code: "FORBIDDEN" });
+    isPartnerInScope.mockResolvedValue(true);
+    isStoreInScope.mockResolvedValue(false);
+    await expect(scopedCaller.admin.stores.remove({ id: 12 })).rejects.toMatchObject<Partial<TRPCError>>({ code: "FORBIDDEN" });
+    isAccessTargetInScope.mockResolvedValue(false);
+    await expect(scopedCaller.admin.access.invites.create({ email: "out@example.com", accessLevel: "viewer", entityId: null, partnerId: 99, storeId: null, expiresInDays: 7, origin: "https://example.com" })).rejects.toMatchObject<Partial<TRPCError>>({ code: "FORBIDDEN" });
+  });
+
+  it("performs successful logical deletes without erasing history", async () => {
+    const manager = appRouter.createCaller(context("manager"));
+    deletePartner.mockResolvedValue({ ...partner, relationshipStatus: "blocked" });
+    await expect(manager.admin.partners.remove({ id: 4 })).resolves.toMatchObject({ relationshipStatus: "blocked" });
+    await expect(manager.admin.stores.remove({ id: 12 })).resolves.toMatchObject({ status: "inactive" });
+    await expect(manager.admin.coupons.remove({ id: 21 })).resolves.toMatchObject({ status: "ended" });
+    expect(deletePartner).toHaveBeenCalledWith(4);
+    expect(deletePartnerStore).toHaveBeenCalledWith(12);
+    expect(deleteCoupon).toHaveBeenCalledWith(21);
+  });
+
+  it("covers access list/update and invite lifecycle with scope guards", async () => {
+    const adminCaller = appRouter.createCaller(context("admin"));
+    await expect(adminCaller.admin.access.list()).resolves.toEqual([]);
+    await expect(adminCaller.admin.access.update({ id: 9, data: { accessLevel: "manager", entityId: 1, partnerId: 4, storeId: 12 } })).resolves.toMatchObject({ id: 9 });
+    await expect(adminCaller.admin.access.invites.list()).resolves.toEqual([]);
+    await expect(adminCaller.admin.access.invites.resend({ id: 8, origin: "https://example.com" })).resolves.toMatchObject({ inviteUrl: "https://example.com/convite?token=token" });
+    await expect(adminCaller.admin.access.invites.revoke({ id: 8 })).resolves.toMatchObject({ status: "revoked" });
+    await expect(adminCaller.admin.access.invites.activate({ id: 8, userId: 9 })).resolves.toMatchObject({ status: "accepted" });
+    expect(updateUserAccess).toHaveBeenCalledWith(9, expect.objectContaining({ partnerId: 4, storeId: 12 }), expect.objectContaining({ accessLevel: "admin" }));
+
+    isLoginInviteInScope.mockResolvedValue(false);
+    await expect(adminCaller.admin.access.invites.revoke({ id: 8 })).rejects.toMatchObject<Partial<TRPCError>>({ code: "FORBIDDEN" });
   });
 
   it("uploads partner and coupon images only through dedicated helpers", async () => {

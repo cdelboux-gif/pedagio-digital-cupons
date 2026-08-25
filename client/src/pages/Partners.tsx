@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { emptyToNull } from "@/lib/format";
 import { buildPartnerGpsUrl, formatPartnerAddress } from "@/lib/partner-location";
 import { trpc } from "@/lib/trpc";
+import { usePermissions } from "@/_core/hooks/useAuth";
 import { Building2, Edit3, Eraser, ExternalLink, Mail, MapPin, Navigation, Phone, Plus, Search, SlidersHorizontal, UsersRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -55,6 +56,7 @@ const statusOptions: Array<{ value: PartnerStatus; label: string }> = [
 ];
 
 export default function Partners() {
+  const { can } = usePermissions();
   const utils = trpc.useUtils();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<PartnerStatus | "all">("all");
@@ -94,7 +96,7 @@ export default function Partners() {
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-6">
-      <header className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary-foreground/60">Relacionamento</p><h1 className="mt-2 text-3xl font-extrabold tracking-tight">Parceiros</h1><p className="mt-2 text-sm text-muted-foreground">Mantenha contatos, endereço validado e o ponto GPS de cada parceiro.</p></div><Button onClick={openCreate} className="h-11 gap-2 px-5 font-bold"><Plus className="h-4 w-4" /> Novo parceiro</Button></header>
+      <header className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary-foreground/60">Relacionamento</p><h1 className="mt-2 text-3xl font-extrabold tracking-tight">Parceiros</h1><p className="mt-2 text-sm text-muted-foreground">Mantenha contatos, endereço validado e o ponto GPS de cada parceiro.</p></div>{can("partners", "create") && <Button onClick={openCreate} className="h-11 gap-2 px-5 font-bold"><Plus className="h-4 w-4" /> Novo parceiro</Button>}</header>
 
       <section className="flex flex-col gap-3 rounded-2xl border border-black/5 bg-white p-4 shadow-[0_6px_20px_rgba(17,20,24,0.025)] lg:flex-row lg:items-center"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={event => setSearch(event.target.value)} className="h-10 border-black/7 bg-[#fafaf7] pl-9" placeholder="Buscar parceiro, contato ou cidade" /></div><div className="flex items-center gap-2"><SlidersHorizontal className="h-4 w-4 text-muted-foreground" /><Select value={status} onValueChange={value => setStatus(value as PartnerStatus | "all")}><SelectTrigger className="h-10 w-[172px] border-black/7 bg-[#fafaf7]"><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">Todos os status</SelectItem>{statusOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div></section>
 

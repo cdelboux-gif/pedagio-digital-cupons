@@ -124,7 +124,7 @@
 - [x] Implementar entrada segura do convidado no OAuth e sincronização do acesso após o primeiro login.
 - [x] Testar expiração, token de uso único, autorização e preservação dos escopos.
 - [x] Validar visualmente o fluxo.
-- [ ] Publicar a criação de logins no próximo checkpoint.
+- [x] Publicar a criação de logins no checkpoint b03accef.
 
 - [x] Expor uma operação administrativa verificável de ativação/aceite manual, mantendo o aceite automático no OAuth.
 - [x] Testar convite expirado, token já consumido e aplicação dos escopos no primeiro login.
@@ -137,3 +137,24 @@
 - [x] Executar duas vezes `acceptLoginInvite` com driver isolado e confirmar que a segunda tentativa falha.
 - [x] Testar o patch do callback OAuth com usuário convidado, verificando persistência dos quatro escopos.
 - [x] Validar o contrato da mutação de criação e a composição visual do modal com URL one-time copiável.
+
+
+## Correção de níveis de acesso e hierarquia
+
+- [x] Definir matriz de módulos e operações por nível de acesso.
+- [x] Definir hierarquia de escopo Entidade > Parceiro > Loja e regras de herança/restrição.
+- [x] Implementar filtros de escopo no backend para listagem e leitura de dados.
+- [x] Implementar regras de criação, edição, alteração de status e exclusão lógica por perfil.
+- [x] Restringir gestão de acessos e convites à hierarquia autorizada.
+- [x] Sincronizar visibilidade da navegação e ações da interface com as permissões efetivas.
+- [x] Criar testes da matriz CRUD, módulos e escopos cruzados.
+- [x] Validar regras com perfis Administrador, Gestor, Operação e Consulta por testes automatizados e sessão administrativa.
+- [ ] Publicar a correção no próximo checkpoint.
+
+- [x] Aplicar escopo hierárquico às rotas de acessos e convites, permitindo gestão somente dentro da árvore autorizada.
+- [x] Aplicar gating de ações em Entidades, Lojas e Acessos conforme a matriz efetiva.
+- [x] Criar testes tRPC de escopos cruzados em parceiros, lojas, cupons, utilizações e acessos, incluindo exclusão lógica.
+
+- [x] Adicionar testes tRPC de access.list/update e invites.resend/revoke/activate para escopos permitidos e bloqueados.
+- [x] Adicionar testes de sucesso para exclusão lógica de parceiro, loja e cupom.
+- [x] Registrar claramente a validação por perfil; quando não houver sessão navegável distinta, manter a evidência como cobertura automatizada e não como teste manual.
