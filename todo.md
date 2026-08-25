@@ -1,5 +1,7 @@
 # Project TODO
 
+## MVP do backoffice
+
 - [x] Analisar o mockup estratégico anexado e traduzir suas diretrizes para a experiência do backoffice.
 - [x] Modelar no banco os cadastros de parceiros, cupons e utilizações, com integridade entre os registros.
 - [x] Aplicar a migração de banco de dados para as entidades do MVP.
@@ -17,25 +19,11 @@
 - [x] Criar testes automatizados para as regras críticas de autorização e validação de utilização.
 - [x] Executar testes, verificação de tipos e validação visual do desktop e do celular.
 - [x] Criar o checkpoint final do MVP e orientar o fluxo de publicação.
-- [x] Retornar erro explícito em consultas administrativas quando o banco de dados estiver indisponível.
-- [x] Diferenciar conflitos de negócio e falhas internas ao registrar utilizações de cupom.
-- [x] Expandir a listagem de utilizações com busca e filtro de período para acompanhamento operacional.
-- [x] Adicionar confirmação para pausar ou encerrar cupons e mensagens de erro consistentes nas mutações administrativas.
-- [x] Cobrir em testes as regras de status, vigência, limite e duplicidade de referência ao registrar utilizações.
-- [x] Corrigir o fluxo de alteração de status para confirmar apenas pausar e encerrar, mantendo a ativação imediata e clara.
-- [x] Validar visualmente as ações de ativar, pausar e encerrar cupons em sessão autenticada de administrador.
-- [x] Entregar as instruções de publicação, pré-requisitos e a referência do checkpoint salvo ao time responsável.
-- [x] Verificar que a conta administrativa provisionada acessa o backoffice publicado e está autorizada nas rotas críticas.
-- [x] Corrigir o papel administrativo da conta provisionada no banco de dados.
-- [x] Validar novo login da conta administradora e seu acesso às rotas críticas do backoffice publicado.
-- [x] Diagnosticar o bloqueio de autenticação no domínio publicado e corrigir a configuração de acesso correspondente.
-- [x] Orientar a conclusão segura da verificação em duas etapas ou identificar uma alternativa de acesso administrativo autorizada.
-- [x] Confirmar o endereço publicado e a apresentação da tela de login do backoffice para a conta administradora.
-- [x] Preservar o papel administrativo já atribuído ao usuário quando o login OAuth atualizar seus dados de perfil.
-- [x] Criar teste de regressão para impedir que um novo login reduza uma conta administradora ao papel de usuário comum.
-- [x] Confirmar com a sessão administrativa liberada que o dashboard e as ações de status de cupom permanecem acessíveis.
-- [x] Executar e registrar, com um cupom de teste, a ativação sem confirmação, a pausa com confirmação e o encerramento com confirmação.
-- [x] Confirmar no ambiente publicado os estados resultantes após cada transição autorizada do cupom CAFE01.
+- [x] Corrigir a persistência do papel administrativo durante o login OAuth.
+- [x] Validar o acesso administrativo e os fluxos de ativar, pausar e encerrar cupons em produção.
+
+## Localização de parceiros
+
 - [x] Modelar endereço completo e coordenadas de localização no cadastro de parceiros.
 - [x] Aplicar a migração de banco para endereço e coordenadas de parceiros.
 - [x] Atualizar APIs administrativas protegidas para salvar e retornar endereço e localização dos parceiros.
@@ -43,10 +31,25 @@
 - [x] Exibir mapa para validação do ponto do parceiro e permitir ajuste da localização.
 - [x] Disponibilizar link de destino GPS para o endereço confirmado do parceiro.
 - [x] Testar ponta a ponta o salvamento de endereço, renderização do mapa e geração segura do destino GPS.
-- [x] Validar em sessão administrativa um parceiro com endereço completo, ponto de mapa e destino GPS publicados.
-- [x] Registrar temporariamente um endereço de validação, confirmar o mapa e o destino GPS e restaurar o parceiro sem endereço ao final.
-- [x] Permitir limpar o ponto GPS e os campos de endereço diretamente no formulário de parceiro.
-- [x] Publicar o controle de limpeza de localização antes da restauração final do parceiro de teste.
-- [x] Cobrir a validação de latitude e longitude nas entradas protegidas de parceiros.
-- [x] Ocultar o destino GPS até que o parceiro tenha endereço ou coordenadas válidos.
+- [x] Permitir limpar o ponto GPS e os campos de endereço diretamente no formulário.
+- [x] Restaurar o parceiro de teste sem endereço ou coordenadas após a validação.
 - [x] Publicar a extensão de endereço e localização do cadastro de parceiros.
+
+## Webhooks — escopo atual: testes e documentação locais
+
+- [x] Definir eventos e payloads para criação, publicação, ativação e resgate de cupons.
+- [x] Definir regras de assinatura HMAC, timestamp, idempotência e respostas HTTP.
+- [x] Criar utilitários locais para assinar e verificar mensagens de webhook.
+- [x] Criar harness local de envio e recebimento simulado, sem chamadas externas.
+- [x] Criar testes de assinatura válida e inválida, segredo ausente, replay, duplicidade, payload inválido e falha transitória.
+- [x] Validar o segredo `WEBHOOK_TEST_SIGNING_SECRET` exclusivamente nos testes locais, sem expô-lo em logs ou payloads.
+- [x] Documentar o contrato, os headers obrigatórios, exemplos de payload e regras para parceiros.
+- [x] Documentar o ciclo de vida, versionamento, retry futuro, dead-letter futuro, auditoria e observabilidade futura.
+- [x] Executar a suíte local sem alterar dados de produção ou realizar chamadas externas.
+- [x] Entregar documentação e testes locais, mantendo integrações reais desativadas.
+- [ ] Criar checkpoint final dos testes e da documentação locais.
+- [ ] Orientar os próximos passos para homologação e ativação futura por parceiro.
+
+- [x] Adicionar teste local de falha transitória, com retorno 5xx simulado e retry elegível sem chamada externa.
+- [x] Ajustar o harness para representar explicitamente falha transitória e retry futuro.
+- [x] Manter a integração real desativada durante o teste de falha transitória.
