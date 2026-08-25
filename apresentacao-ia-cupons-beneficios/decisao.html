@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial Narrow', sans-serif; background: #fff; }
+        .slide-container {
+            width: 1280px;
+            min-height: 720px;
+            background: #F0F4F8;
+            color: #334155;
+            position: relative;
+            overflow: hidden;
+            border-top: 8px solid #FACC15;
+        }
+        .header {
+            padding-top: 60px;
+            padding-left: 80px;
+            margin-bottom: 60px;
+        }
+        .eyebrow {
+            font-size: 14px;
+            letter-spacing: 3px;
+            color: #E11D48;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        .title {
+            font-size: 52px;
+            font-weight: 800;
+            color: #0F2C59;
+            letter-spacing: -1px;
+            line-height: 1.1;
+        }
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            padding-left: 80px;
+            padding-right: 80px;
+            gap: 0;
+        }
+        .column {
+            padding-top: 20px;
+            border-right: 2px dashed #CBD5E1;
+            padding-right: 60px;
+        }
+        .column:last-child {
+            border-right: none;
+            padding-left: 60px;
+            padding-right: 0;
+        }
+        .section-label {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0F2C59;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .section-label::after {
+            content: "";
+            flex: 1;
+            height: 2px;
+            background: #FACC15;
+        }
+        .list {
+            list-style: none;
+        }
+        .list-item {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 35px;
+        }
+        .badge {
+            min-width: 36px;
+            height: 36px;
+            background: #0F2C59;
+            color: #FACC15;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 16px;
+        }
+        .item-text h3 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #0F2C59;
+            margin-bottom: 6px;
+        }
+        .item-text p {
+            font-size: 18px;
+            line-height: 1.4;
+            color: #475569;
+        }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+        .metric-card {
+            background: #fff;
+            padding-top: 25px;
+            padding-left: 25px;
+            padding-right: 25px;
+            min-height: 140px;
+            border-top: 4px solid #0F2C59;
+        }
+        .metric-card h4 {
+            font-size: 14px;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        .metric-card p {
+            font-size: 20px;
+            font-weight: 600;
+            color: #0F2C59;
+            line-height: 1.3;
+        }
+        .footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #0F2C59;
+            color: #fff;
+            padding-top: 20px;
+            padding-left: 80px;
+            font-size: 14px;
+            letter-spacing: 1px;
+            font-weight: 400;
+            min-height: 60px;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <div class="eyebrow">Próximos Passos</div>
+            <h1 class="title">A decisão inicial é simples e mensurável</h1>
+        </div>
+
+        <div class="content-grid">
+            <div class="column">
+                <h2 class="section-label">Requisitos para Início</h2>
+                <ul class="list">
+                    <li class="list-item">
+                        <div class="badge">1</div>
+                        <div class="item-text">
+                            <h3>Aprovação do MVP Assistido</h3>
+                            <p>Foco em validação interna e simulação no backoffice antes da exposição ampla.</p>
+                        </div>
+                    </li>
+                    <li class="list-item">
+                        <div class="badge">2</div>
+                        <div class="item-text">
+                            <h3>Política de Consentimento</h3>
+                            <p>Definição clara do opt-in e transparência sobre o uso de dados no aplicativo.</p>
+                        </div>
+                    </li>
+                    <li class="list-item">
+                        <div class="badge">3</div>
+                        <div class="item-text">
+                            <h3>Integração de Eventos</h3>
+                            <p>Habilitação dos sinais de impressão, clique, dispensa e localização aproximada.</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="column">
+                <h2 class="section-label">Métricas de Sucesso</h2>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <h4>Qualidade</h4>
+                        <p>Cobertura de usuários e explicabilidade válida.</p>
+                    </div>
+                    <div class="metric-card">
+                        <h4>Engajamento</h4>
+                        <p>Taxa de clique e redução de dispensas.</p>
+                    </div>
+                    <div class="metric-card">
+                        <h4>Conversão</h4>
+                        <p>Resgates efetivos originados por recomendação.</p>
+                    </div>
+                    <div class="metric-card">
+                        <h4>Segurança</h4>
+                        <p>Zero recomendações inelegíveis ou fora de escopo.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            PEDÁGIO DIGITAL · ROAD COMMERCE · ESTRATÉGIA DE INTELIGÊNCIA 2026
+        </div>
+    </div>
+</body>
+</html>

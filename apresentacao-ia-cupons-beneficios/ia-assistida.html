@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; background: #fff; }
+        .slide-container { 
+            width: 1280px; 
+            min-height: 720px; 
+            background: #F0F4F8; 
+            color: #334155; 
+            position: relative;
+            overflow: hidden;
+        }
+        .header {
+            padding-top: 60px;
+            padding-left: 80px;
+        }
+        .kicker {
+            font-size: 14px;
+            letter-spacing: 3px;
+            color: #E11D48;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        .title {
+            font-size: 48px;
+            font-weight: 800;
+            color: #0F2C59;
+            letter-spacing: -1px;
+            line-height: 1.1;
+            max-width: 900px;
+        }
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            padding-top: 80px;
+            padding-left: 80px;
+            padding-right: 80px;
+            gap: 0;
+        }
+        .column {
+            border-right: 2px dashed #CBD5E1;
+            padding-top: 20px;
+            padding-right: 40px;
+            padding-left: 20px;
+            min-height: 400px;
+        }
+        .column:last-child {
+            border-right: none;
+        }
+        .badge {
+            width: 48px;
+            height: 48px;
+            background: #FACC15;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+            color: #0F2C59;
+            margin-bottom: 30px;
+        }
+        .col-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0F2C59;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .col-text {
+            font-size: 18px;
+            line-height: 1.6;
+            color: #475569;
+        }
+        .highlight {
+            font-weight: 700;
+            color: #0F2C59;
+        }
+        .footer-note {
+            position: absolute;
+            bottom: 40px;
+            left: 80px;
+            font-size: 14px;
+            color: #94A3B8;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <div class="kicker">Estratégia Híbrida</div>
+            <h1 class="title">Começar com IA assistida é mais seguro</h1>
+        </div>
+
+        <div class="content-grid">
+            <div class="column">
+                <div class="badge">01</div>
+                <h2 class="col-title">Elegibilidade</h2>
+                <p class="col-text">
+                    Filtros <span class="highlight">determinísticos</span> eliminam cupons expirados, pausados, sem saldo ou fora do escopo geográfico.
+                </p>
+            </div>
+            <div class="column">
+                <div class="badge">02</div>
+                <h2 class="col-title">Score Híbrido</h2>
+                <p class="col-text">
+                    Ordenação baseada em <span class="highlight">afinidade, contexto e urgência</span>. A IA refina a prioridade sem quebrar as regras.
+                </p>
+            </div>
+            <div class="column">
+                <div class="badge">03</div>
+                <h2 class="col-title">IA Controlada</h2>
+                <p class="col-text">
+                    A inteligência atua na <span class="highlight">classificação de ofertas</span> e na geração de explicações claras para o usuário.
+                </p>
+            </div>
+            <div class="column">
+                <div class="badge">04</div>
+                <h2 class="col-title">Autoridade</h2>
+                <p class="col-text">
+                    O <span class="highlight">servidor central</span> mantém a palavra final sobre segurança, disponibilidade e governança de dados.
+                </p>
+            </div>
+        </div>
+
+        <div class="footer-note">PEDÁGIO DIGITAL · ROAD COMMERCE · MÓDULO DE INTELIGÊNCIA</div>
+    </div>
+</body>
+</html>

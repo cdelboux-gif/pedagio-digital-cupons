@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial Narrow', sans-serif; background: #fff; }
+        .slide-container {
+            width: 1280px;
+            min-height: 720px;
+            background: #F0F4F8;
+            color: #334155;
+            position: relative;
+            overflow: hidden;
+            border-top: 8px solid #0F2C59;
+        }
+        .header {
+            padding-top: 60px;
+            padding-left: 80px;
+        }
+        .eyebrow {
+            font-size: 14px;
+            letter-spacing: 3px;
+            color: #E11D48;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        .title {
+            font-size: 48px;
+            font-weight: 600;
+            color: #0F2C59;
+            letter-spacing: -1px;
+            line-height: 1.1;
+            max-width: 900px;
+        }
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            padding-top: 60px;
+            padding-left: 80px;
+            padding-right: 80px;
+        }
+        .column {
+            padding-top: 20px;
+            border-right: 2px dashed #CBD5E1;
+            padding-right: 40px;
+        }
+        .column:last-child {
+            border-right: none;
+            padding-left: 40px;
+            padding-right: 0;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0F2C59;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+        }
+        .section-title i {
+            margin-right: 12px;
+            color: #FACC15;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .data-table th {
+            text-align: left;
+            font-size: 14px;
+            color: #64748B;
+            padding-top: 10px;
+            border-bottom: 1px solid #CBD5E1;
+            text-transform: uppercase;
+        }
+        .data-table td {
+            padding-top: 15px;
+            font-size: 18px;
+            font-weight: 400;
+            color: #334155;
+        }
+        .data-table tr:last-child td {
+            padding-top: 15px;
+        }
+        .feature-list {
+            list-style: none;
+        }
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+        .badge {
+            min-width: 32px;
+            height: 32px;
+            background: #FACC15;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            color: #0F2C59;
+            margin-right: 16px;
+        }
+        .feature-text h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0F2C59;
+            margin-bottom: 4px;
+        }
+        .feature-text p {
+            font-size: 16px;
+            line-height: 1.4;
+            color: #475569;
+        }
+        .footer-note {
+            position: absolute;
+            bottom: 40px;
+            left: 80px;
+            font-size: 14px;
+            color: #94A3B8;
+            font-weight: 400;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <div class="eyebrow">Gestão & Operação</div>
+            <h1 class="title">O backoffice torna a inteligência operável</h1>
+        </div>
+
+        <div class="content-grid">
+            <div class="column">
+                <h2 class="section-title">Indicadores de Performance</h2>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Área</th>
+                            <th>Métricas de Sucesso</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Oferta</strong></td>
+                            <td>Cupons elegíveis, saldo disponível, vencimentos</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Alcance</strong></td>
+                            <td>Impressões, cliques e taxa de dispensa</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Conversão</strong></td>
+                            <td>Resgates por recomendação vs. baseline</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Qualidade</strong></td>
+                            <td>Diversidade de parceiros e explicabilidade</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="column">
+                <h2 class="section-title">Controle Administrativo</h2>
+                <ul class="feature-list">
+                    <li class="feature-item">
+                        <div class="badge">1</div>
+                        <div class="feature-text">
+                            <h3>Mapa de Oportunidades</h3>
+                            <p>Visão por entidade, parceiro, loja e região geográfica.</p>
+                        </div>
+                    </li>
+                    <li class="feature-item">
+                        <div class="badge">2</div>
+                        <div class="feature-text">
+                            <h3>Simulação de Cenários</h3>
+                            <p>Testar recomendações por perfil sem afetar usuários reais.</p>
+                        </div>
+                    </li>
+                    <li class="feature-item">
+                        <div class="badge">3</div>
+                        <div class="feature-text">
+                            <h3>Intervenção Direta</h3>
+                            <p>Pausar regras, parceiros ou campanhas de IA instantaneamente.</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-note">
+            Pedágio Digital · Módulo de Inteligência de Negócio · 2026
+        </div>
+    </div>
+</body>
+</html>

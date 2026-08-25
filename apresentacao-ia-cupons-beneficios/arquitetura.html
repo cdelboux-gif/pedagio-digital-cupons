@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial Narrow', sans-serif; background: #fff; }
+        .slide-container {
+            width: 1280px;
+            min-height: 720px;
+            background: #F0F4F8;
+            color: #334155;
+            position: relative;
+            overflow: hidden;
+        }
+        .header {
+            padding-top: 60px;
+            padding-left: 80px;
+        }
+        .eyebrow {
+            font-size: 14px;
+            letter-spacing: 3px;
+            color: #E11D48;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        .title {
+            font-size: 48px;
+            font-weight: 600;
+            color: #0F2C59;
+            letter-spacing: -1px;
+            line-height: 1.1;
+            max-width: 900px;
+        }
+        .flow-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 40px;
+            padding-top: 60px;
+            padding-left: 80px;
+            padding-right: 80px;
+        }
+        .step {
+            padding-top: 20px;
+            border-top: 2px dashed #CBD5E1;
+            position: relative;
+        }
+        .badge {
+            width: 36px;
+            height: 36px;
+            background: #FACC15;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 16px;
+            color: #0F2C59;
+            margin-bottom: 15px;
+        }
+        .step-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #0F2C59;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .step-text {
+            font-size: 17px;
+            line-height: 1.4;
+            color: #475569;
+        }
+        .footer-note {
+            position: absolute;
+            bottom: 40px;
+            left: 80px;
+            font-size: 14px;
+            color: #94A3B8;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <div class="eyebrow">Arquitetura Técnica</div>
+            <h1 class="title">A arquitetura separa regras, score e IA</h1>
+        </div>
+
+        <div class="flow-container">
+            <div class="step">
+                <div class="badge">1</div>
+                <h2 class="step-title">Contexto</h2>
+                <p class="step-text">App envia contexto mínimo, localização aproximada e consentimento ativo.</p>
+            </div>
+            <div class="step">
+                <div class="badge">2</div>
+                <h2 class="step-title">Validação</h2>
+                <p class="step-text">API valida identidade, escopo, opt-out e filtros de elegibilidade determinística.</p>
+            </div>
+            <div class="step">
+                <div class="badge">3</div>
+                <h2 class="step-title">Candidatos</h2>
+                <p class="step-text">Motor gera lista de cupons ativos e calcula o score híbrido de prioridade.</p>
+            </div>
+            <div class="step">
+                <div class="badge">4</div>
+                <h2 class="step-title">IA & Explicação</h2>
+                <p class="step-text">Inteligência classifica ofertas e gera explicações dentro de contrato estruturado.</p>
+            </div>
+            <div class="step">
+                <div class="badge">5</div>
+                <h2 class="step-title">Resposta</h2>
+                <p class="step-text">API retorna recomendações ordenadas e registra impressão pseudonimizada.</p>
+            </div>
+            <div class="step">
+                <div class="badge">6</div>
+                <h2 class="step-title">Feedback</h2>
+                <p class="step-text">Clique, dispensa e resgate alimentam o aprendizado contínuo do modelo.</p>
+            </div>
+        </div>
+
+        <div class="footer-note">PEDÁGIO DIGITAL · FLUXO DE INTELIGÊNCIA PREDITIVA</div>
+    </div>
+</body>
+</html>

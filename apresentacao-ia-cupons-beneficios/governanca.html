@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial Narrow', sans-serif; background: #fff; }
+        .slide-container {
+            width: 1280px;
+            min-height: 720px;
+            background: #F0F4F8;
+            color: #334155;
+            position: relative;
+            overflow: hidden;
+            border-top: 8px solid #0F2C59;
+        }
+        .header {
+            padding-top: 60px;
+            padding-left: 80px;
+        }
+        .eyebrow {
+            font-size: 14px;
+            letter-spacing: 3px;
+            color: #E11D48;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        .title {
+            font-size: 48px;
+            font-weight: 600;
+            color: #0F2C59;
+            letter-spacing: -1px;
+            line-height: 1.1;
+            max-width: 900px;
+        }
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            padding-top: 60px;
+            padding-left: 80px;
+            padding-right: 80px;
+        }
+        .column {
+            padding-top: 20px;
+            border-right: 2px dashed #CBD5E1;
+            padding-right: 40px;
+        }
+        .column:last-child {
+            border-right: none;
+            padding-left: 40px;
+            padding-right: 0;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0F2C59;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 30px;
+        }
+        .governance-list {
+            list-style: none;
+        }
+        .governance-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 35px;
+        }
+        .badge {
+            min-width: 36px;
+            height: 36px;
+            background: #FACC15;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+            color: #0F2C59;
+            margin-right: 20px;
+        }
+        .governance-text h3 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #0F2C59;
+            margin-bottom: 6px;
+        }
+        .governance-text p {
+            font-size: 18px;
+            line-height: 1.4;
+            color: #475569;
+        }
+        .footer-note {
+            position: absolute;
+            bottom: 40px;
+            left: 80px;
+            font-size: 14px;
+            color: #94A3B8;
+            font-weight: 400;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <div class="eyebrow">Segurança & Ética</div>
+            <h1 class="title">Governança é parte do produto</h1>
+        </div>
+
+        <div class="content-grid">
+            <div class="column">
+                <h2 class="section-title">Privacidade & Ética</h2>
+                <ul class="governance-list">
+                    <li class="governance-item">
+                        <div class="badge">1</div>
+                        <div class="governance-text">
+                            <h3>Consentimento Ativo</h3>
+                            <p>Personalização baseada em opt-in claro e opção de opt-out persistente no aplicativo.</p>
+                        </div>
+                    </li>
+                    <li class="governance-item">
+                        <div class="badge">2</div>
+                        <div class="governance-text">
+                            <h3>Pseudonimização</h3>
+                            <p>Referências de cliente tratadas como pseudônimos, sem inferência de atributos sensíveis.</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="column">
+                <h2 class="section-title">Segurança & Controle</h2>
+                <ul class="governance-list">
+                    <li class="governance-item">
+                        <div class="badge">3</div>
+                        <div class="governance-text">
+                            <h3>Auditoria de IA</h3>
+                            <p>Registro de regras, pesos, versão do modelo e motivo exibido para cada recomendação.</p>
+                        </div>
+                    </li>
+                    <li class="governance-item">
+                        <div class="badge">4</div>
+                        <div class="governance-text">
+                            <h3>Fallback & Kill-Switch</h3>
+                            <p>Mecanismo de desligamento imediato e retorno determinístico em caso de falha ou anomalia.</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-note">
+            Pedágio Digital · Governança de Inteligência de Negócio · 2026
+        </div>
+    </div>
+</body>
+</html>

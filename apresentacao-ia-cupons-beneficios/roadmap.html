@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; background: #fff; }
+        .slide-container { 
+            width: 1280px; 
+            min-height: 720px; 
+            background: #F0F4F8; 
+            color: #334155; 
+            position: relative;
+            overflow: hidden;
+            padding-top: 60px;
+        }
+        .header {
+            padding-left: 80px;
+            margin-bottom: 60px;
+        }
+        .eyebrow {
+            font-size: 14px;
+            letter-spacing: 3px;
+            color: #E11D48;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        .title {
+            font-size: 48px;
+            font-weight: 800;
+            color: #0F2C59;
+            letter-spacing: -1px;
+            line-height: 1.1;
+        }
+        .roadmap-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            padding-left: 80px;
+            padding-right: 80px;
+            gap: 0;
+            position: relative;
+        }
+        .roadmap-grid::before {
+            content: "";
+            position: absolute;
+            top: 24px;
+            left: 80px;
+            right: 80px;
+            height: 2px;
+            background: #CBD5E1;
+            z-index: 0;
+        }
+        .phase {
+            position: relative;
+            z-index: 1;
+            padding-top: 60px;
+            border-right: 2px dashed #CBD5E1;
+            padding-right: 30px;
+            padding-left: 10px;
+        }
+        .phase:last-child {
+            border-right: none;
+        }
+        .dot {
+            position: absolute;
+            top: 15px;
+            left: 10px;
+            width: 20px;
+            height: 20px;
+            background: #FACC15;
+            border: 4px solid #F0F4F8;
+            border-radius: 50%;
+        }
+        .phase-id {
+            font-size: 14px;
+            font-weight: 800;
+            color: #E11D48;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+        }
+        .phase-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0F2C59;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+        .phase-content {
+            font-size: 18px;
+            line-height: 1.5;
+            color: #475569;
+        }
+        .phase-content strong {
+            display: block;
+            color: #0F2C59;
+            margin-bottom: 8px;
+        }
+        .footer-note {
+            position: absolute;
+            bottom: 40px;
+            left: 80px;
+            font-size: 14px;
+            color: #94A3B8;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <div class="eyebrow">Evolução Estratégica</div>
+            <h1 class="title">Roadmap: da assistência ao Road Commerce</h1>
+        </div>
+
+        <div class="roadmap-grid">
+            <div class="phase">
+                <div class="dot"></div>
+                <div class="phase-id">FASE A</div>
+                <h2 class="phase-title">IA Assistida</h2>
+                <div class="phase-content">
+                    <strong>Score e Simulação</strong>
+                    Elegibilidade, explicações e painel de oportunidades no backoffice.
+                </div>
+            </div>
+            <div class="phase">
+                <div class="dot"></div>
+                <div class="phase-id">FASE B</div>
+                <h2 class="phase-title">Aprendizado</h2>
+                <div class="phase-content">
+                    <strong>Eventos Reais</strong>
+                    Coleta de impressões, cliques e resgates para calibrar o motor.
+                </div>
+            </div>
+            <div class="phase">
+                <div class="dot"></div>
+                <div class="phase-id">FASE C</div>
+                <h2 class="phase-title">Personalização</h2>
+                <div class="phase-content">
+                    <strong>Experimentos</strong>
+                    Afinidade por perfil e testes controlados de conversão.
+                </div>
+            </div>
+            <div class="phase">
+                <div class="dot"></div>
+                <div class="phase-id">FASE D</div>
+                <h2 class="phase-title">Road Commerce</h2>
+                <div class="phase-content">
+                    <strong>Marketplace</strong>
+                    Expansão para serviços, conveniência e manutenção na jornada.
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-note">PEDÁGIO DIGITAL · ROADMAP DE INTELIGÊNCIA · 2026</div>
+    </div>
+</body>
+</html>

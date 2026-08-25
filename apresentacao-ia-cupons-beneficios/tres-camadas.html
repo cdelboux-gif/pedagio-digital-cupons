@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Helvetica Condensed', 'Arial Narrow', sans-serif; background: #fff; }
+        .slide-container { 
+            width: 1280px; 
+            min-height: 720px; 
+            background: #F0F4F8; 
+            color: #334155; 
+            padding-top: 60px;
+            position: relative;
+        }
+        .header {
+            padding-left: 80px;
+            margin-bottom: 60px;
+        }
+        .eyebrow {
+            font-size: 14px;
+            letter-spacing: 3px;
+            color: #E11D48;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+        .title {
+            font-size: 52px;
+            font-weight: 600;
+            color: #0F2C59;
+            letter-spacing: -1px;
+            line-height: 1.1;
+        }
+        .content-wrapper {
+            padding-left: 80px;
+            padding-right: 80px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        th {
+            text-align: left;
+            padding-top: 20px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid #0F2C59;
+        }
+        .header-label {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 28px;
+            font-weight: 600;
+            color: #0F2C59;
+        }
+        .header-label i {
+            color: #FACC15;
+            font-size: 24px;
+        }
+        td {
+            padding-top: 40px;
+            vertical-align: top;
+            border-right: 2px dashed #CBD5E1;
+        }
+        td:last-child {
+            border-right: none;
+        }
+        .value-list {
+            list-style: none;
+            padding-right: 40px;
+            padding-left: 20px;
+        }
+        .value-item {
+            position: relative;
+            margin-bottom: 35px;
+            font-size: 22px;
+            line-height: 1.4;
+            color: #334155;
+        }
+        .value-item::before {
+            content: "";
+            position: absolute;
+            left: -25px;
+            top: 10px;
+            width: 10px;
+            height: 10px;
+            background: #FACC15;
+            border-radius: 50%;
+        }
+        .value-item strong {
+            display: block;
+            color: #0F2C59;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <div class="eyebrow">Proposta de Valor</div>
+            <h1 class="title">O módulo conecta três camadas de valor</h1>
+        </div>
+        
+        <div class="content-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>
+                            <div class="header-label">
+                                <i class="fas fa-user"></i>
+                                <span>Usuário</span>
+                            </div>
+                        </th>
+                        <th style="padding-left: 40px;">
+                            <div class="header-label">
+                                <i class="fas fa-handshake"></i>
+                                <span>Parceiro</span>
+                            </div>
+                        </th>
+                        <th style="padding-left: 40px;">
+                            <div class="header-label">
+                                <i class="fas fa-network-wired"></i>
+                                <span>Plataforma</span>
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <ul class="value-list">
+                                <li class="value-item">
+                                    <strong>Relevância Real</strong>
+                                    Descobre benefícios compatíveis com sua jornada e preferências.
+                                </li>
+                                <li class="value-item">
+                                    <strong>Economia de Tempo</strong>
+                                    Reduz o ruído de ofertas irrelevantes durante a viagem.
+                                </li>
+                            </ul>
+                        </td>
+                        <td style="padding-left: 40px;">
+                            <ul class="value-list">
+                                <li class="value-item">
+                                    <strong>Tráfego Qualificado</strong>
+                                    Recebe demanda de usuários com alta propensão de consumo.
+                                </li>
+                                <li class="value-item">
+                                    <strong>Eficiência Operacional</strong>
+                                    Aumenta a taxa de utilização e conversão dos cupons ativos.
+                                </li>
+                            </ul>
+                        </td>
+                        <td style="padding-left: 40px;">
+                            <ul class="value-list">
+                                <li class="value-item">
+                                    <strong>Aprendizado Contínuo</strong>
+                                    Coleta dados valiosos sobre comportamento e interações.
+                                </li>
+                                <li class="value-item">
+                                    <strong>Road Commerce</strong>
+                                    Constrói a base sólida para o futuro marketplace de serviços.
+                                </li>
+                            </ul>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

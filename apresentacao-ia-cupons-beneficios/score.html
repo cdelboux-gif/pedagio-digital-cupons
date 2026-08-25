@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; background: #fff; }
+        .slide-container { 
+            width: 1280px; 
+            min-height: 720px; 
+            background: #F0F4F8; 
+            color: #334155; 
+            position: relative;
+            overflow: hidden;
+        }
+        .header { padding: 60px 80px 0; }
+        .kicker { 
+            font-size: 14px; 
+            letter-spacing: 3px; 
+            color: #E11D48; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            margin-bottom: 12px;
+        }
+        .title { 
+            font-size: 48px; 
+            color: #0F2C59; 
+            font-weight: 800; 
+            letter-spacing: -1px;
+            line-height: 1.1;
+        }
+        .content { padding: 40px 80px 0; }
+        
+        /* Score Bar Visualization */
+        .score-bar {
+            display: flex;
+            height: 60px;
+            width: 100%;
+            margin-bottom: 60px;
+            border: 1px solid #cbd5e1;
+        }
+        .segment {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 18px;
+            color: #0F2C59;
+        }
+        .s1 { width: 28%; background: #facc15; }
+        .s2 { width: 22%; background: #fbbf24; }
+        .s3 { width: 18%; background: #f59e0b; }
+        .s4 { width: 16%; background: #d97706; }
+        .s5 { width: 10%; background: #b45309; color: #fff; }
+        .s6 { width: 6%; background: #92400e; color: #fff; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+        .legend-item {
+            padding-top: 20px;
+            border-top: 2px dashed #cbd5e1;
+            display: flex;
+            gap: 20px;
+        }
+        .badge {
+            min-width: 40px;
+            height: 40px;
+            background: #0F2C59;
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 14px;
+        }
+        .text h3 {
+            font-size: 22px;
+            color: #0F2C59;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .text p {
+            font-size: 18px;
+            line-height: 1.4;
+            color: #475569;
+        }
+        .formula {
+            position: absolute;
+            bottom: 40px;
+            right: 80px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #94a3b8;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <div class="kicker">Algoritmo Híbrido</div>
+            <h1 class="title">O score transforma sinais em prioridade</h1>
+        </div>
+        
+        <div class="content">
+            <div class="score-bar">
+                <div class="segment s1">28%</div>
+                <div class="segment s2">22%</div>
+                <div class="segment s3">18%</div>
+                <div class="segment s4">16%</div>
+                <div class="segment s5">10%</div>
+                <div class="segment s6">6%</div>
+            </div>
+
+            <div class="grid">
+                <div class="legend-item">
+                    <div class="badge">28</div>
+                    <div class="text">
+                        <h3>Afinidade</h3>
+                        <p>Categorias e parceiros utilizados anteriormente pelo usuário.</p>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="badge">22</div>
+                    <div class="text">
+                        <h3>Contexto</h3>
+                        <p>Horário, região e etapa declarada da jornada rodoviária.</p>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="badge">18</div>
+                    <div class="text">
+                        <h3>Proximidade</h3>
+                        <p>Distância física da loja (requer localização autorizada).</p>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="badge">16</div>
+                    <div class="text">
+                        <h3>Popularidade</h3>
+                        <p>Tendências agregadas por região e período operacional.</p>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="badge">10</div>
+                    <div class="text">
+                        <h3>Urgência</h3>
+                        <p>Proximidade do fim da vigência ou limite de saldo do cupom.</p>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="badge">06</div>
+                    <div class="text">
+                        <h3>Diversidade</h3>
+                        <p>Garantia de variedade para evitar saturação de um único parceiro.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="formula">SCORE = Σ (PESO × SINAL) - PENALIDADES</div>
+    </div>
+</body>
+</html>

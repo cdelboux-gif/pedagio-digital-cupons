@@ -1,0 +1,144 @@
+{
+  "project_info": {
+    "title": "Inteligência que aproxima pessoas, rotas e benefícios",
+    "created": 1787698825.653,
+    "last_updated": 1787698937.602,
+    "total_slides": 12
+  },
+  "slides": [
+    {
+      "id": "cover",
+      "state": "edited",
+      "pageNum": 1
+    },
+    {
+      "id": "oportunidade",
+      "state": "edited",
+      "pageNum": 2
+    },
+    {
+      "id": "problema",
+      "state": "edited",
+      "pageNum": 3
+    },
+    {
+      "id": "tres-camadas",
+      "state": "edited",
+      "pageNum": 4
+    },
+    {
+      "id": "ia-assistida",
+      "state": "edited",
+      "pageNum": 5
+    },
+    {
+      "id": "score",
+      "state": "edited",
+      "pageNum": 6
+    },
+    {
+      "id": "explicabilidade",
+      "state": "edited",
+      "pageNum": 7
+    },
+    {
+      "id": "backoffice",
+      "state": "edited",
+      "pageNum": 8
+    },
+    {
+      "id": "arquitetura",
+      "state": "edited",
+      "pageNum": 9
+    },
+    {
+      "id": "governanca",
+      "state": "edited",
+      "pageNum": 10
+    },
+    {
+      "id": "roadmap",
+      "state": "edited",
+      "pageNum": 11
+    },
+    {
+      "id": "decisao",
+      "state": "edited",
+      "pageNum": 12
+    }
+  ],
+  "outline": [
+    {
+      "id": "cover",
+      "title": "Inteligência que aproxima pessoas, rotas e benefícios",
+      "summary": "Capa com subtítulo sobre recomendação preditiva para o ecossistema Pedágio Digital.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "oportunidade",
+      "title": "A próxima vantagem é a relevância",
+      "summary": "Apresentar a oportunidade de conectar o usuário à oferta certa no momento certo.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "problema",
+      "title": "O problema está entre a oferta e o momento",
+      "summary": "Mostrar as limitações de uma vitrine genérica e a necessidade de contexto.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "tres-camadas",
+      "title": "O módulo conecta três camadas de valor",
+      "summary": "Relacionar valor para usuário, parceiro e plataforma.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "ia-assistida",
+      "title": "Começar com IA assistida é mais seguro",
+      "summary": "Explicar a estratégia híbrida com elegibilidade determinística, score e IA controlada.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "score",
+      "title": "O score transforma sinais em prioridade",
+      "summary": "Apresentar os sinais e pesos do score inicial de recomendação.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "explicabilidade",
+      "title": "Cada recomendação precisa explicar seu motivo",
+      "summary": "Mostrar um exemplo de recomendação explicável no aplicativo e os controles do usuário.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "backoffice",
+      "title": "O backoffice torna a inteligência operável",
+      "summary": "Descrever o painel de oportunidades, performance e controles por parceiro.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "arquitetura",
+      "title": "A arquitetura separa regras, score e IA",
+      "summary": "Apresentar o fluxo técnico do contexto enviado pelo app até o aprendizado com eventos.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "governanca",
+      "title": "Governança é parte do produto",
+      "summary": "Apresentar consentimento, pseudonimização, auditoria, fallback e desligamento.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "roadmap",
+      "title": "Roadmap: da assistência ao Road Commerce",
+      "summary": "Mostrar as quatro etapas de evolução do MVP assistido ao marketplace de comércio e serviços.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "decisao",
+      "title": "A decisão inicial é simples e mensurável",
+      "summary": "Fechar com os requisitos para iniciar o MVP assistido e seus indicadores.",
+      "image_plan": "Use a suitable image if needed"
+    }
+  ]
+}
