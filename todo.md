@@ -23,13 +23,16 @@
 - [x] Adicionar confirmação para pausar ou encerrar cupons e mensagens de erro consistentes nas mutações administrativas.
 - [x] Cobrir em testes as regras de status, vigência, limite e duplicidade de referência ao registrar utilizações.
 - [x] Corrigir o fluxo de alteração de status para confirmar apenas pausar e encerrar, mantendo a ativação imediata e clara.
-- [ ] Após o provisionamento de uma conta administrativa, validar visualmente as ações de ativar, pausar e encerrar cupons em sessão autenticada.
-- [ ] Entregar as instruções de publicação, pré-requisitos e a referência do checkpoint salvo ao time responsável.
-- [ ] Verificar que a conta administrativa provisionada acessa o backoffice publicado e está autorizada nas rotas críticas.
+- [x] Validar visualmente as ações de ativar, pausar e encerrar cupons em sessão autenticada de administrador.
+- [x] Entregar as instruções de publicação, pré-requisitos e a referência do checkpoint salvo ao time responsável.
+- [x] Verificar que a conta administrativa provisionada acessa o backoffice publicado e está autorizada nas rotas críticas.
 - [x] Corrigir o papel administrativo da conta provisionada no banco de dados.
-- [ ] Validar novo login da conta administradora e seu acesso às rotas críticas do backoffice publicado.
-- [ ] Diagnosticar o bloqueio de autenticação no domínio publicado e corrigir a configuração de acesso correspondente.
-- [ ] Orientar a conclusão segura da verificação em duas etapas ou identificar uma alternativa de acesso administrativo autorizada.
-- [ ] Confirmar o endereço publicado e a apresentação da tela de login do backoffice para a conta administradora.
+- [x] Validar novo login da conta administradora e seu acesso às rotas críticas do backoffice publicado.
+- [x] Diagnosticar o bloqueio de autenticação no domínio publicado e corrigir a configuração de acesso correspondente.
+- [x] Orientar a conclusão segura da verificação em duas etapas ou identificar uma alternativa de acesso administrativo autorizada.
+- [x] Confirmar o endereço publicado e a apresentação da tela de login do backoffice para a conta administradora.
 - [x] Preservar o papel administrativo já atribuído ao usuário quando o login OAuth atualizar seus dados de perfil.
 - [x] Criar teste de regressão para impedir que um novo login reduza uma conta administradora ao papel de usuário comum.
+- [x] Confirmar com a sessão administrativa liberada que o dashboard e as ações de status de cupom permanecem acessíveis.
+- [x] Executar e registrar, com um cupom de teste, a ativação sem confirmação, a pausa com confirmação e o encerramento com confirmação.
+- [x] Confirmar no ambiente publicado os estados resultantes após cada transição autorizada do cupom CAFE01.
