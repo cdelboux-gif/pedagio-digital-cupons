@@ -56,10 +56,27 @@ async function requireDb() {
   return db;
 }
 
+export function resolveUserRole({
+  incomingRole,
+  existingRole,
+  isOwner,
+}: {
+  incomingRole?: "user" | "admin" | null;
+  existingRole?: "user" | "admin" | null;
+  isOwner: boolean;
+}) {
+  return incomingRole ?? existingRole ?? (isOwner ? "admin" : "user");
+}
+
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
 
   const db = await requireDb();
+  const existing = await db
+    .select({ role: users.role })
+    .from(users)
+    .where(eq(users.openId, user.openId))
+    .limit(1);
   const values: InsertUser = { openId: user.openId };
   const updateSet: Record<string, unknown> = {};
   const textFields = ["name", "email", "loginMethod"] as const;
@@ -71,7 +88,11 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     }
   });
 
-  values.role = user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user");
+  values.role = resolveUserRole({
+    incomingRole: user.role,
+    existingRole: existing[0]?.role,
+    isOwner: user.openId === ENV.ownerOpenId,
+  });
   updateSet.role = values.role;
   values.lastSignedIn = user.lastSignedIn ?? new Date();
   updateSet.lastSignedIn = values.lastSignedIn;
