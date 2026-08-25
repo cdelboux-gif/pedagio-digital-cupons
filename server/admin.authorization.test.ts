@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
-function createContext(role: "admin" | "user" | null): TrpcContext {
+function createContext(role: "admin" | "user" | null, accessLevel: "admin" | "manager" | "operator" | "viewer" = role === "admin" ? "admin" : "viewer"): TrpcContext {
   return {
     user: role
       ? {
@@ -13,6 +13,10 @@ function createContext(role: "admin" | "user" | null): TrpcContext {
           name: "Equipe Pedágio Digital",
           loginMethod: "manus",
           role,
+          accessLevel,
+          entityId: null,
+          partnerId: null,
+          storeId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
           lastSignedIn: new Date(),
@@ -24,20 +28,30 @@ function createContext(role: "admin" | "user" | null): TrpcContext {
 }
 
 describe("admin router authorization", () => {
-  it("blocks an authenticated non-admin user before any partner operation", async () => {
-    const caller = appRouter.createCaller(createContext("user"));
+  it("blocks an authenticated consulta user before management mutations", async () => {
+    const caller = appRouter.createCaller(createContext("user", "viewer"));
 
-    await expect(caller.admin.partners.list()).rejects.toMatchObject<Partial<TRPCError>>({
-      code: "FORBIDDEN",
-    });
+    await expect(caller.admin.integrations.create({
+      partnerId: 1,
+      name: "Consulta bloqueada",
+      endpointUrl: "https://example.com/webhook",
+      allowedEvents: ["coupon.created"],
+      status: "active",
+    })).rejects.toMatchObject<Partial<TRPCError>>({ code: "FORBIDDEN" });
   });
 
   it("blocks anonymous requests before operational data can be read", async () => {
     const caller = appRouter.createCaller(createContext(null));
 
     await expect(caller.admin.dashboard()).rejects.toMatchObject<Partial<TRPCError>>({
-      code: "FORBIDDEN",
+      code: "UNAUTHORIZED",
     });
+  });
+
+  it("blocks a consulta user before management mutations", async () => {
+    const caller = appRouter.createCaller(createContext("user", "viewer"));
+
+    await expect(caller.admin.entities.create({ name: "Operação", code: "OPERACAO", status: "active" })).rejects.toMatchObject<Partial<TRPCError>>({ code: "FORBIDDEN" });
   });
 
   it("rejects coupon payloads whose validity ends before it starts", async () => {

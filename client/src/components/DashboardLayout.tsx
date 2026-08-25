@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import {   Activity, Handshake, LayoutDashboard, LogOut, PanelLeft, ShieldCheck, TicketPercent, Webhook } from "lucide-react";
+import { Activity, Boxes, Handshake, LayoutDashboard, LogOut, PanelLeft, ShieldCheck, Store, TicketPercent, UserCog, Webhook } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -33,7 +33,10 @@ const menuItems = [
   { icon: Handshake, label: "Parceiros", path: "/parceiros" },
   { icon: TicketPercent, label: "Cupons", path: "/cupons" },
   { icon: Activity, label: "Utilizações", path: "/utilizacoes" },
+  { icon: Store, label: "Lojas", path: "/lojas" },
+  { icon: Boxes, label: "Entidades", path: "/entidades" },
   { icon: Webhook, label: "Integrações", path: "/integracoes" },
+  { icon: UserCog, label: "Acessos", path: "/acessos", adminOnly: true },
 ];
 
 const SIDEBAR_WIDTH_KEY = "pedagio-sidebar-width";
@@ -65,11 +68,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (user.role !== "admin") {
+  if (!user.accessLevel) {
     return (
       <AccessGate
         title="Permissão necessária"
-        description="Sua conta está autenticada, mas não possui perfil administrativo. Solicite a liberação ao responsável pelo backoffice."
+        description="Sua conta está autenticada, mas ainda não possui um nível de acesso configurado. Solicite a liberação ao responsável pelo backoffice."
         actionLabel="Sair da conta"
         onAction={logout}
         secondary
@@ -82,6 +85,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <DashboardLayoutContent setSidebarWidth={setSidebarWidth}>{children}</DashboardLayoutContent>
     </SidebarProvider>
   );
+}
+
+function accessLevelLabel(level?: string | null) {
+  return level === "admin" ? "Administrador" : level === "manager" ? "Gestor" : level === "operator" ? "Operação" : "Consulta";
 }
 
 function AccessGate({
@@ -130,7 +137,8 @@ function DashboardLayoutContent({
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-  const activeMenuItem = menuItems.find(item => item.path === location) ?? menuItems[0];
+  const visibleMenuItems = menuItems.filter(item => !item.adminOnly || user?.role === "admin" || user?.accessLevel === "admin");
+  const activeMenuItem = visibleMenuItems.find(item => item.path === location) ?? visibleMenuItems[0];
 
   useEffect(() => {
     if (isCollapsed) setIsResizing(false);
@@ -184,7 +192,7 @@ function DashboardLayoutContent({
           <SidebarContent className="px-3">
             {!isCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-white/35">Operação</p>}
             <SidebarMenu className="gap-1">
-              {menuItems.map(item => {
+              {visibleMenuItems.map(item => {
                 const isActive = location === item.path;
                 return (
                   <SidebarMenuItem key={item.path}>
@@ -216,7 +224,7 @@ function DashboardLayoutContent({
                     {!isCollapsed && (
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-bold text-white">{user?.name ?? "Administrador"}</p>
-                        <p className="mt-0.5 truncate text-[10px] text-white/45">Administrador</p>
+                        <p className="mt-0.5 truncate text-[10px] text-white/45">{accessLevelLabel(user?.role === "admin" ? "admin" : user?.accessLevel)}</p>
                       </div>
                     )}
                   </button>

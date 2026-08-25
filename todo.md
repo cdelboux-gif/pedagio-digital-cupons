@@ -90,4 +90,25 @@
 
 - [x] Adicionar ao formulário de integração o status inicial ativa/pausada e persistir a escolha.
 - [x] Criar testes específicos de autorização admin e de não exposição de `secretHash` ou segredo em claro nas respostas.
-- [ ] Publicar a extensão de integrações no próximo checkpoint.
+- [x] Publicar a extensão de integrações no checkpoint 8cd54230.
+
+
+## Nova expansão: imagens, acesso e múltiplas lojas
+
+- [x] Adicionar imagem de logo ao cadastro e edição de parceiros, com armazenamento seguro e pré-visualização.
+- [x] Adicionar imagem de identificação ao cadastro e edição de cupons, com armazenamento seguro e pré-visualização.
+- [x] Modelar entidades organizacionais e níveis de acesso administrativos além de admin/user.
+- [x] Implementar autorização por nível de acesso nas rotas e ações administrativas.
+- [x] Criar entidades de lojas e permitir múltiplas lojas vinculadas ao mesmo parceiro.
+- [x] Atualizar cadastro, listagens, filtros e cupons para selecionar e exibir a loja vinculada.
+- [x] Cobrir imagens, permissões, entidades e múltiplas lojas com testes automatizados.
+- [x] Validar visualmente os novos fluxos em desktop e mobile.
+- [ ] Publicar a expansão no próximo checkpoint.
+
+- [x] Adicionar testes automatizados para criação e listagem de entidades e lojas administrativas.
+- [x] Adicionar testes automatizados para vínculo de loja em cupons e utilizações, incluindo filtros por loja.
+- [x] Adicionar testes integrados das mutações de upload de logo de parceiro e imagem de item de cupom, validando persistência de URL/chave sem expor dados indevidos.
+
+- [x] Testar `admin.uses.list` com filtro por `storeId` e verificar a propagação correta do filtro.
+- [x] Testar o caminho positivo de utilização com `storeId`, verificando o vínculo enviado ao helper de registro.
+- [x] Assegurar nos testes de upload que a resposta traz URL pública e não expõe `logoKey`, `itemImageKey` ou hashes internos.

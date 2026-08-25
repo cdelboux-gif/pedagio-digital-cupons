@@ -27,19 +27,27 @@ const requireUser = t.middleware(async opts => {
 
 export const protectedProcedure = t.procedure.use(requireUser);
 
-export const adminProcedure = t.procedure.use(
-  t.middleware(async opts => {
-    const { ctx, next } = opts;
+type AccessLevel = "admin" | "manager" | "operator" | "viewer";
 
-    if (!ctx.user || ctx.user.role !== 'admin') {
-      throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
-    }
+function hasAccess(ctx: TrpcContext, allowed: AccessLevel[]) {
+  if (!ctx.user) return false;
+  if (ctx.user.role === "admin") return true;
+  return allowed.includes(ctx.user.accessLevel as AccessLevel);
+}
 
-    return next({
-      ctx: {
-        ...ctx,
-        user: ctx.user,
-      },
-    });
-  }),
-);
+const accessProcedure = (allowed: AccessLevel[], anonymousCode: "FORBIDDEN" | "UNAUTHORIZED" = "UNAUTHORIZED") =>
+  t.procedure.use(
+    t.middleware(async opts => {
+      const { ctx, next } = opts;
+      if (!hasAccess(ctx, allowed)) {
+        throw new TRPCError({ code: ctx.user ? "FORBIDDEN" : anonymousCode, message: ctx.user ? NOT_ADMIN_ERR_MSG : UNAUTHED_ERR_MSG });
+      }
+      return next({ ctx: { ...ctx, user: ctx.user! } });
+    }),
+  );
+
+/** Backward-compatible alias for management operations. */
+export const adminProcedure = accessProcedure(["admin", "manager"], "FORBIDDEN");
+export const viewProcedure = accessProcedure(["admin", "manager", "operator", "viewer"]);
+export const operationProcedure = accessProcedure(["admin", "manager", "operator"]);
+export const superAdminProcedure = accessProcedure(["admin"]);

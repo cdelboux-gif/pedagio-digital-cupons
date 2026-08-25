@@ -1,0 +1,34 @@
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { trpc } from "@/lib/trpc";
+import { LockKeyhole, UserCog } from "lucide-react";
+import { useMemo } from "react";
+import { toast } from "sonner";
+
+type AccessLevel = "admin" | "manager" | "operator" | "viewer";
+const levelLabels: Record<AccessLevel, string> = { admin: "Administrador", manager: "Gestor", operator: "Operação", viewer: "Consulta" };
+
+export default function Access() {
+  const utils = trpc.useUtils();
+  const users = trpc.admin.access.list.useQuery(undefined, { retry: false });
+  const entities = trpc.admin.entities.list.useQuery(undefined, { retry: false });
+  const partners = trpc.admin.partners.list.useQuery(undefined, { retry: false });
+  const stores = trpc.admin.stores.list.useQuery(undefined, { retry: false });
+  const update = trpc.admin.access.update.useMutation({ onSuccess: async () => { await utils.admin.access.list.invalidate(); toast.success("Acesso atualizado"); }, onError: error => toast.error(error.message) });
+  const entityMap = useMemo(() => new Map((entities.data ?? []).map(entity => [entity.id, entity.name])), [entities.data]);
+
+  return <div className="mx-auto max-w-[1400px] space-y-6">
+    <header><p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary-foreground/60">Governança</p><h1 className="mt-2 text-3xl font-extrabold tracking-tight">Níveis de acesso</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Defina o que cada login pode consultar ou operar. O nível Administrador é reservado para a gestão completa do backoffice.</p></header>
+    <Card className="border-0 bg-[#111418] text-white shadow-sm"><CardContent className="grid gap-4 p-6 sm:grid-cols-4 sm:p-7"><LevelInfo label="Administrador" text="Acesso total e gestão de permissões." tone="bg-primary text-primary-foreground" /><LevelInfo label="Gestor" text="Cadastros e operação, sem acessos." tone="bg-white/10 text-white" /><LevelInfo label="Operação" text="Cupons, utilizações e leitura." tone="bg-white/10 text-white" /><LevelInfo label="Consulta" text="Apenas leitura dos módulos." tone="bg-white/10 text-white" /></CardContent></Card>
+    <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2"><UserCog className="h-5 w-5 text-primary-foreground" /> Logins cadastrados</CardTitle></CardHeader><CardContent className="space-y-3">{users.isLoading ? <p className="text-sm text-muted-foreground">Carregando acessos…</p> : users.data?.length ? users.data.map(user => <AccessRow key={user.id} user={user} entities={entities.data ?? []} entityMap={entityMap} partners={partners.data ?? []} stores={stores.data ?? []} onUpdate={(data) => update.mutate({ id: user.id, data })} />) : <div className="rounded-2xl border border-dashed border-black/10 p-10 text-center text-sm text-muted-foreground">Nenhum login sincronizado ainda.</div>}</CardContent></Card>
+  </div>;
+}
+
+function AccessRow({ user, entities, entityMap, partners, stores, onUpdate }: { user: { id: number; name: string | null; email: string | null; role: "admin" | "user"; accessLevel: AccessLevel; entityId: number | null; partnerId: number | null; storeId: number | null }; entities: Array<{ id: number; name: string }>; entityMap: Map<number, string>; partners: Array<{ id: number; displayName: string }>; stores: Array<{ store: { id: number; partnerId: number; name: string }; partnerName: string }>; onUpdate: (data: { accessLevel: AccessLevel; entityId: number | null; partnerId: number | null; storeId: number | null }) => void }) {
+  const availableStores = user.partnerId ? stores.filter(({ store }) => store.partnerId === user.partnerId) : stores;
+  const disabled = user.role === "admin";
+  return <div className="rounded-2xl border border-black/6 p-4"><div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-center"><div className="flex min-w-0 items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#fff8ce] text-[#6a5a00]"><UserCog className="h-4 w-4" /></div><div className="min-w-0"><p className="truncate font-extrabold">{user.name || "Login sem nome"}</p><p className="truncate text-xs text-muted-foreground">{user.email || "E-mail não informado"}</p></div></div><div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4"><Select value={user.accessLevel} onValueChange={value => onUpdate({ accessLevel: value as AccessLevel, entityId: user.entityId, partnerId: user.partnerId, storeId: user.storeId })} disabled={disabled}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(levelLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select><Select value={user.entityId?.toString() ?? "none"} onValueChange={value => onUpdate({ accessLevel: user.accessLevel, entityId: value === "none" ? null : Number(value), partnerId: user.partnerId, storeId: user.storeId })}><SelectTrigger><SelectValue placeholder="Entidade" /></SelectTrigger><SelectContent><SelectItem value="none">Sem entidade</SelectItem>{entities.map(entity => <SelectItem key={entity.id} value={entity.id.toString()}>{entity.name}</SelectItem>)}</SelectContent></Select><Select value={user.partnerId?.toString() ?? "none"} onValueChange={value => onUpdate({ accessLevel: user.accessLevel, entityId: user.entityId, partnerId: value === "none" ? null : Number(value), storeId: null })}><SelectTrigger><SelectValue placeholder="Parceiro" /></SelectTrigger><SelectContent><SelectItem value="none">Sem parceiro</SelectItem>{partners.map(partner => <SelectItem key={partner.id} value={partner.id.toString()}>{partner.displayName}</SelectItem>)}</SelectContent></Select><Select value={user.storeId?.toString() ?? "none"} onValueChange={value => onUpdate({ accessLevel: user.accessLevel, entityId: user.entityId, partnerId: user.partnerId, storeId: value === "none" ? null : Number(value) })}><SelectTrigger><SelectValue placeholder="Loja" /></SelectTrigger><SelectContent><SelectItem value="none">Todas as lojas</SelectItem>{availableStores.map(({ store }) => <SelectItem key={store.id} value={store.id.toString()}>{store.name}</SelectItem>)}</SelectContent></Select></div><Badge variant="outline" className="w-fit gap-1 lg:col-start-2"><LockKeyhole className="h-3 w-3" />{user.entityId ? entityMap.get(user.entityId) : "Escopo global"}</Badge></div></div>;
+}
+
+function LevelInfo({ label, text, tone }: { label: string; text: string; tone: string }) { return <div><span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${tone}`}>{label}</span><p className="mt-2 text-xs leading-5 text-white/60">{text}</p></div>; }

@@ -1,0 +1,1 @@
+-- No-op: as foreign keys de entidade e escopo de usuários foram consolidadas em 0004_worthless_skullbuster.sql.

@@ -10,6 +10,9 @@ import NotFound from "./pages/NotFound";
 import Partners from "./pages/Partners";
 import Uses from "./pages/Uses";
 import Integrations from "./pages/Integrations";
+import Entities from "./pages/Entities";
+import Stores from "./pages/Stores";
+import Access from "./pages/Access";
 
 function Router() {
   return (
@@ -20,6 +23,9 @@ function Router() {
         <Route path="/cupons" component={Coupons} />
         <Route path="/utilizacoes" component={Uses} />
         <Route path="/integracoes" component={Integrations} />
+        <Route path="/entidades" component={Entities} />
+        <Route path="/lojas" component={Stores} />
+        <Route path="/acessos" component={Access} />
         <Route component={NotFound} />
       </Switch>
     </DashboardLayout>
