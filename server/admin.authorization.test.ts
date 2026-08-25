@@ -40,6 +40,11 @@ describe("admin router authorization", () => {
     })).rejects.toMatchObject<Partial<TRPCError>>({ code: "FORBIDDEN" });
   });
 
+  it("blocks anonymous requests before segmented intelligence metrics can be read", async () => {
+    const caller = appRouter.createCaller(createContext(null));
+    await expect(caller.admin.intelligence.metrics({ partnerId: 1, storeId: 1, tollPlazaId: 1, startsAt: new Date("2026-08-01T00:00:00.000Z"), endsAt: new Date("2026-08-31T23:59:59.000Z") })).rejects.toMatchObject<Partial<TRPCError>>({ code: "UNAUTHORIZED" });
+  });
+
   it("blocks anonymous requests before operational data can be read", async () => {
     const caller = appRouter.createCaller(createContext(null));
 

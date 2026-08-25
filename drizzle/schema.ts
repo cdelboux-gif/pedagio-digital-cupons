@@ -346,6 +346,7 @@ export const recommendationCampaigns = mysqlTable(
   {
     id: int("id").autoincrement().primaryKey(),
     partnerId: int("partnerId").notNull().references(() => partners.id, { onDelete: "restrict" }),
+    storeId: int("storeId").references(() => partnerStores.id, { onDelete: "set null" }),
     couponId: int("couponId").notNull().references(() => coupons.id, { onDelete: "restrict" }),
     tollPlazaId: int("tollPlazaId").references(() => tollPlazas.id, { onDelete: "set null" }),
     name: varchar("name", { length: 160 }).notNull(),
@@ -364,6 +365,7 @@ export const recommendationCampaigns = mysqlTable(
   },
   table => [
     index("recommendation_campaigns_partner_idx").on(table.partnerId),
+    index("recommendation_campaigns_store_idx").on(table.storeId),
     index("recommendation_campaigns_coupon_idx").on(table.couponId),
     index("recommendation_campaigns_toll_idx").on(table.tollPlazaId),
     index("recommendation_campaigns_status_idx").on(table.status, table.startsAt, table.endsAt),

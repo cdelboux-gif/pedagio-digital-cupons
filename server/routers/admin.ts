@@ -194,6 +194,7 @@ const tollPlazaInput = z.object({
 
 const recommendationCampaignInput = z.object({
   partnerId: z.number().int().positive(),
+  storeId: nullableId,
   couponId: z.number().int().positive(),
   tollPlazaId: nullableId,
   name: z.string().trim().min(2).max(160),
@@ -575,8 +576,13 @@ export const adminRouter = router({
         if (!partner || !coupon) throw notFound("Parceiro ou cupom");
         if (!(await isPartnerInScope(input.partnerId, scopeOf(ctx.user), true))) throw forbiddenScope();
         if (!(await isCouponInScope(input.couponId, scopeOf(ctx.user), true))) throw forbiddenScope();
+        if (input.storeId) {
+          const store = await getPartnerStoreById(input.storeId);
+          if (!store || store.partnerId !== input.partnerId) throw new TRPCError({ code: "BAD_REQUEST", message: "A loja precisa pertencer ao parceiro" });
+          if (!(await isStoreInScope(input.storeId, scopeOf(ctx.user), true))) throw forbiddenScope();
+        }
         if (coupon.partnerId !== input.partnerId) throw new TRPCError({ code: "BAD_REQUEST", message: "O cupom precisa pertencer ao parceiro" });
-        const campaign = await createRecommendationCampaign({ ...input, tollPlazaId: input.tollPlazaId ?? null, sponsorshipLabel: input.sponsorshipLabel ?? null, budgetLimit: input.budgetLimit ?? null, bidAmount: input.bidAmount == null ? null : input.bidAmount.toFixed(4), createdByUserId: ctx.user.id });
+        const campaign = await createRecommendationCampaign({ ...input, storeId: input.storeId ?? null, tollPlazaId: input.tollPlazaId ?? null, sponsorshipLabel: input.sponsorshipLabel ?? null, budgetLimit: input.budgetLimit ?? null, bidAmount: input.bidAmount == null ? null : input.bidAmount.toFixed(4), createdByUserId: ctx.user.id });
         if (!campaign) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar a campanha" });
         return campaign;
       }),
@@ -624,7 +630,15 @@ export const adminRouter = router({
       await audit(ctx, { action: "simulate", resourceType: "coupon", resourceId: recommendations[0]?.couponId ?? null, resourceLabel: `Passagem ${plaza.name}`, after: { event: event.row, recommendations }, scope: scopeOf(ctx.user) });
       return { event: event.row, created: true, recommendations };
     }),
-    metrics: moduleProcedure("intelligence", "read").input(z.object({ campaignId: z.number().int().positive().optional() }).optional()).query(({ input }) => listRecommendationMetrics(input?.campaignId)),
+    metrics: moduleProcedure("intelligence", "read").input(z.object({ campaignId: z.number().int().positive().optional(), partnerId: z.number().int().positive().optional(), storeId: z.number().int().positive().optional(), tollPlazaId: z.number().int().positive().optional(), startsAt: z.coerce.date().optional(), endsAt: z.coerce.date().optional() }).optional()).query(async ({ input, ctx }) => {
+      const scope = scopeOf(ctx.user);
+      const filter = { ...(input ?? {}) };
+      if (scope.partnerId) filter.partnerId = scope.partnerId;
+      if (scope.storeId) filter.storeId = scope.storeId;
+      if (filter.partnerId && !(await isPartnerInScope(filter.partnerId, scope, false))) throw forbiddenScope();
+      if (filter.storeId && !(await isStoreInScope(filter.storeId, scope, false))) throw forbiddenScope();
+      return listRecommendationMetrics(filter);
+    }),
     trackInteraction: moduleProcedure("intelligence", "manage").input(z.object({ deliveryId: z.number().int().positive(), eventName: recommendationInteraction, eventAt: z.coerce.date(), costAmount: z.number().nonnegative().nullable().optional() })).mutation(async ({ input, ctx }) => {
       const delivery = await getRecommendationDeliveryById(input.deliveryId);
       if (!delivery) throw notFound("Recomendação");

@@ -78,6 +78,13 @@
       "when": 1787701074847,
       "tag": "0010_chilly_the_hunter",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1787701549147,
+      "tag": "0011_small_whizzer",
+      "breakpoints": true
     }
   ]
 }

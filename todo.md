@@ -202,7 +202,7 @@
 - [x] Projetar score de recomendação com validade, margem, distância, afinidade, disponibilidade e risco de abuso.
 - [x] Definir explicações exibíveis ao usuário e ao backoffice para cada recomendação.
 - [x] Definir governança de dados, consentimento, minimização, anonimização e limites de uso da IA.
-- [ ] Criar módulo de insights no backoffice para acompanhar oportunidades por parceiro, loja, região e período.
+- [x] Criar módulo de insights no backoffice para acompanhar oportunidades por parceiro, loja, região e período.
 - [x] Criar API protegida para recomendações e simulação de cenários sem alterar dados reais.
 - [ ] Integrar o módulo ao app da Pedágio Digital com contrato versionado, inicialmente em modo assistido.
 - [ ] Implementar testes de score, elegibilidade, escopo, explicabilidade, cold start e segurança.
@@ -243,3 +243,6 @@
 - [ ] Testar privacidade, escopo, frequência, orçamento, latência e explicabilidade.
 - [x] Isolar simulações de recomendações das tabelas operacionais ou marcar/segregar claramente seus registros.
 - [ ] Adicionar testes tRPC de autorização e simulação sem impacto em cupons, utilizações, campanhas reais ou métricas finais.
+- [x] Adicionar métricas segmentadas por parceiro, loja, pedágio/região e período no backend.
+- [x] Expandir `/inteligencia` com filtros de período e recortes por parceiro/loja/região, incluindo estados vazio e erro.
+- [x] Cobrir os insights segmentados com testes de escopo e exclusão de simulações.

@@ -1094,7 +1094,7 @@ export async function listRecommendationCandidatesForToll(tollPlazaId: number) {
   return rows;
 }
 
-export type RecommendationCampaignInput = Pick<RecommendationCampaign, "partnerId" | "couponId" | "tollPlazaId" | "name" | "mode" | "sponsorshipLabel" | "startsAt" | "endsAt" | "budgetLimit" | "bidAmount" | "frequencyCap" | "status"> & { createdByUserId: number };
+export type RecommendationCampaignInput = Pick<RecommendationCampaign, "partnerId" | "storeId" | "couponId" | "tollPlazaId" | "name" | "mode" | "sponsorshipLabel" | "startsAt" | "endsAt" | "budgetLimit" | "bidAmount" | "frequencyCap" | "status"> & { createdByUserId: number };
 export async function createRecommendationCampaign(input: RecommendationCampaignInput) {
   const db = await requireDb();
   const result = await db.insert(recommendationCampaigns).values(input);
@@ -1152,10 +1152,22 @@ export async function recordRecommendationInteraction(input: Pick<Recommendation
   }
 }
 
-export async function listRecommendationMetrics(campaignId?: number) {
+export type RecommendationMetricsFilter = { campaignId?: number; partnerId?: number; storeId?: number; tollPlazaId?: number; startsAt?: Date; endsAt?: Date };
+export async function listRecommendationMetrics(filter: RecommendationMetricsFilter = {}) {
   const db = await requireDb();
-  const rows = await db.select({ eventName: recommendationInteractions.eventName, total: count(recommendationInteractions.id) }).from(recommendationInteractions).where(campaignId ? and(eq(recommendationInteractions.campaignId, campaignId), eq(recommendationInteractions.isSimulation, 0)) : eq(recommendationInteractions.isSimulation, 0)).groupBy(recommendationInteractions.eventName);
-  return rows;
+  const conditions: SQL[] = [eq(recommendationInteractions.isSimulation, 0)];
+  if (filter.campaignId) conditions.push(eq(recommendationInteractions.campaignId, filter.campaignId));
+  if (filter.partnerId) conditions.push(eq(recommendationCampaigns.partnerId, filter.partnerId));
+  if (filter.storeId) conditions.push(eq(recommendationCampaigns.storeId, filter.storeId));
+  if (filter.tollPlazaId) conditions.push(eq(recommendationCampaigns.tollPlazaId, filter.tollPlazaId));
+  if (filter.startsAt) conditions.push(gte(recommendationInteractions.eventAt, filter.startsAt));
+  if (filter.endsAt) conditions.push(lte(recommendationInteractions.eventAt, filter.endsAt));
+  return db
+    .select({ eventName: recommendationInteractions.eventName, partnerId: recommendationCampaigns.partnerId, storeId: recommendationCampaigns.storeId, tollPlazaId: recommendationCampaigns.tollPlazaId, total: count(recommendationInteractions.id) })
+    .from(recommendationInteractions)
+    .innerJoin(recommendationCampaigns, eq(recommendationCampaigns.id, recommendationInteractions.campaignId))
+    .where(and(...conditions))
+    .groupBy(recommendationInteractions.eventName, recommendationCampaigns.partnerId, recommendationCampaigns.storeId, recommendationCampaigns.tollPlazaId);
 }
 
 export async function retryEmailOutbox(id: number) {
