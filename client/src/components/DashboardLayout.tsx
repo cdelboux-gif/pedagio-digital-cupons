@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Activity, Handshake, LayoutDashboard, LogOut, PanelLeft, ShieldCheck, TicketPercent } from "lucide-react";
+import {   Activity, Handshake, LayoutDashboard, LogOut, PanelLeft, ShieldCheck, TicketPercent, Webhook } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -33,6 +33,7 @@ const menuItems = [
   { icon: Handshake, label: "Parceiros", path: "/parceiros" },
   { icon: TicketPercent, label: "Cupons", path: "/cupons" },
   { icon: Activity, label: "Utilizações", path: "/utilizacoes" },
+  { icon: Webhook, label: "Integrações", path: "/integracoes" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "pedagio-sidebar-width";

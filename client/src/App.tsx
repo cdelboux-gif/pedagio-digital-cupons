@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import Partners from "./pages/Partners";
 import Uses from "./pages/Uses";
+import Integrations from "./pages/Integrations";
 
 function Router() {
   return (
@@ -18,6 +19,7 @@ function Router() {
         <Route path="/parceiros" component={Partners} />
         <Route path="/cupons" component={Coupons} />
         <Route path="/utilizacoes" component={Uses} />
+        <Route path="/integracoes" component={Integrations} />
         <Route component={NotFound} />
       </Switch>
     </DashboardLayout>

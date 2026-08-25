@@ -47,9 +47,25 @@
 - [x] Documentar o ciclo de vida, versionamento, retry futuro, dead-letter futuro, auditoria e observabilidade futura.
 - [x] Executar a suíte local sem alterar dados de produção ou realizar chamadas externas.
 - [x] Entregar documentação e testes locais, mantendo integrações reais desativadas.
-- [ ] Criar checkpoint final dos testes e da documentação locais.
-- [ ] Orientar os próximos passos para homologação e ativação futura por parceiro.
+- [x] Criar checkpoint final dos testes e da documentação locais.
+- [x] Orientar os próximos passos para homologação e ativação futura por parceiro.
 
 - [x] Adicionar teste local de falha transitória, com retorno 5xx simulado e retry elegível sem chamada externa.
 - [x] Ajustar o harness para representar explicitamente falha transitória e retry futuro.
 - [x] Manter a integração real desativada durante o teste de falha transitória.
+
+
+## Área de Integrações no backoffice
+
+- [x] Revisar a documentação de webhooks anexada e traduzir o contrato para a experiência do backoffice.
+- [x] Adicionar navegação protegida para a nova área de Integrações.
+- [x] Criar visão geral com estado atual, escopo local e integração real desativada.
+- [x] Exibir eventos de criação, publicação, ativação e resgate de cupons.
+- [x] Exibir regras de HMAC, timestamp, idempotência, replay e respostas HTTP.
+- [x] Exibir próximos passos para homologação e ativação futura por parceiro.
+- [x] Testar a nova área no desktop, no celular e em sessão administrativa.
+- [ ] Publicar a nova área de Integrações sem ativar endpoints externos.
+- [ ] Orientar o uso da área e os limites do escopo atual.
+
+- [ ] Validar `/integracoes` com sessão autenticada de administrador, confirmando acesso ao conteúdo e não apenas ao bloqueio de acesso.
+- [ ] Registrar evidência autenticada desktop/mobile da área de Integrações após login administrativo.
