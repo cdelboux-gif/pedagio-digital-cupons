@@ -33,6 +33,7 @@ vi.mock("./db", async importOriginal => {
     resendLoginInvite: vi.fn(),
     revokeLoginInvite: vi.fn(),
     activateLoginInvite: vi.fn(),
+    appendAuditLog: vi.fn(),
   };
 });
 
@@ -68,6 +69,7 @@ const updateUserAccess = vi.mocked(db.updateUserAccess);
 const resendLoginInvite = vi.mocked(db.resendLoginInvite);
 const revokeLoginInvite = vi.mocked(db.revokeLoginInvite);
 const activateLoginInvite = vi.mocked(db.activateLoginInvite);
+const appendAuditLog = vi.mocked(db.appendAuditLog);
 
 function context(accessLevel: "admin" | "manager" | "operator" | "viewer" = "admin"): TrpcContext {
   return {
@@ -112,6 +114,7 @@ beforeEach(() => {
   resendLoginInvite.mockResolvedValue({ invite: { id: 8, email: "gestor@example.com", status: "pending", accessLevel: "manager", entityId: 1, partnerId: 4, storeId: 12, expiresAt: new Date(Date.now() + 86400000), createdAt: new Date() }, token: "token" });
   revokeLoginInvite.mockResolvedValue({ id: 8, status: "revoked" });
   activateLoginInvite.mockResolvedValue({ id: 8, status: "accepted" });
+  appendAuditLog.mockResolvedValue(undefined);
 });
 
 describe("admin structure procedures", () => {

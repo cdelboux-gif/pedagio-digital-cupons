@@ -46,9 +46,25 @@ import {
   isAccessTargetInScope,
   scopeAllows,
   type AccessScope,
+  appendAuditLog,
+  listAuditLogs,
+  listEmailSenders,
+  createEmailSender,
+  listEmailTemplates,
+  getEmailTemplateById,
+  createEmailTemplate,
+  updateEmailTemplate,
+  listEmailRules,
+  createEmailRule,
+  updateEmailRule,
+  listEmailOutbox,
+  simulateEmailOutbox,
+  retryEmailOutbox,
+  enqueueEmailRules,
 } from "../db";
 import { accessLevelValues, entityStatusValues, integrationEventValues, integrationStatusValues, storeStatusValues } from "../../drizzle/schema";
 import { moduleProcedure, router, superAdminProcedure } from "../_core/trpc";
+import { emailEventValues, validateEmailTemplate, renderEmail, renderEmailText, type EmailCondition, type EmailVariables } from "../email";
 
 const partnerStatus = z.enum(["prospect", "active", "inactive", "blocked"]);
 const couponStatus = z.enum(["draft", "active", "paused", "ended"]);
@@ -59,6 +75,13 @@ const entityStatus = z.enum(entityStatusValues);
 const storeStatus = z.enum(storeStatusValues);
 const loginInviteStatus = z.enum(["pending", "accepted", "revoked", "expired"]);
 const nullableId = z.number().int().positive().nullable().optional();
+const emailEvent = z.enum(emailEventValues);
+const auditResource = z.enum(["access", "login_invite", "entity", "partner", "store", "coupon", "integration", "email_sender", "email_template", "email_rule", "email_outbox"]);
+const auditAction = z.enum(["create", "update", "status_change", "delete", "revoke", "activate", "resend", "simulate"]);
+const emailCondition = z.object({ field: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_.-]*$/).max(80), operator: z.enum(["equals", "not_equals", "contains", "gt", "gte", "lt", "lte"]), value: z.union([z.string().max(240), z.number(), z.boolean()]) });
+const emailSenderInput = z.object({ name: z.string().trim().min(2).max(120), fromName: z.string().trim().min(2).max(160), fromEmail: z.string().trim().email().max(320), replyTo: z.string().trim().email().max(320).nullable().optional(), status: z.enum(["active", "inactive"]) });
+const emailTemplateInput = z.object({ templateKey: z.string().trim().regex(/^[a-z0-9_.-]+$/).max(100), name: z.string().trim().min(2).max(160), status: z.enum(["draft", "published", "archived"]), version: z.number().int().positive().max(9999), senderId: nullableId, subject: z.string().trim().min(1).max(240), preheader: z.string().trim().max(240).nullable().optional(), bodyHtml: z.string().max(100_000), bodyText: z.string().max(100_000).nullable().optional(), allowedVariables: z.array(z.string().regex(/^[a-zA-Z][a-zA-Z0-9_.-]*$/).max(80)).max(100) });
+const emailRuleInput = z.object({ templateId: z.number().int().positive(), name: z.string().trim().min(2).max(160), eventName: emailEvent, conditions: z.array(emailCondition).max(20), enabled: z.boolean(), cooldownSeconds: z.number().int().min(0).max(2_592_000) });
 const imageUpload = z.object({
   fileName: z.string().trim().min(1).max(160),
   dataUrl: z.string().regex(/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/).max(7_500_000),
@@ -164,6 +187,18 @@ function forbiddenScope() {
   return new TRPCError({ code: "FORBIDDEN", message: "Você não possui escopo para este registro" });
 }
 
+async function audit(ctx: { user: { id: number; email?: string | null } }, input: Parameters<typeof appendAuditLog>[0]) {
+  await appendAuditLog({ ...input, actorUserId: ctx.user.id, actorEmail: ctx.user.email ?? null });
+}
+
+async function dispatchEmailEvent(ctx: { user: { id: number; email?: string | null } }, eventName: (typeof emailEventValues)[number], recipientEmail: string | null | undefined, variables: EmailVariables, eventKey: string) {
+  const normalizedEmail = recipientEmail?.trim().toLowerCase();
+  if (!normalizedEmail || !/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(normalizedEmail)) return [];
+  const queued = await enqueueEmailRules({ eventName, recipientEmail: normalizedEmail, recipientName: null, variables, eventKey, createdByUserId: ctx.user.id });
+  for (const item of queued) if (item.row) await audit(ctx, { action: "create", resourceType: "email_outbox", resourceId: item.row.id, resourceLabel: item.row.recipientEmail, after: item.row });
+  return queued.map(item => item.row).filter(Boolean);
+}
+
 export const adminRouter = router({
   dashboard: moduleProcedure("dashboard", "read").query(({ ctx }) => getDashboardSummary(scopeOf(ctx.user))),
 
@@ -177,11 +212,17 @@ export const adminRouter = router({
       const partner = await createPartner(data);
       if (!partner) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar o parceiro" });
       const saved = logo ? await uploadPartnerLogo(partner.id, logo) : partner;
-      return saved ? publicPartner(saved) : saved;
+      const visible = saved ? publicPartner(saved) : saved;
+      await audit(ctx, { action: "create", resourceType: "partner", resourceId: partner.id, resourceLabel: partner.displayName, after: visible, scope: scopeOf(ctx.user) });
+      await dispatchEmailEvent(ctx, "partner.created", data.email, { "partner.id": partner.id, "partner.name": partner.displayName }, `partner:${partner.id}:created`);
+      return visible;
     }),
     remove: moduleProcedure("partners", "delete").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
       if (!(await isPartnerInScope(input.id, scopeOf(ctx.user), true))) throw forbiddenScope();
-      return deletePartner(input.id);
+      const before = await getPartnerById(input.id);
+      const removed = await deletePartner(input.id);
+      await audit(ctx, { action: "delete", resourceType: "partner", resourceId: input.id, resourceLabel: before?.displayName, before: before ? publicPartner(before) : before, after: removed ? publicPartner(removed) : removed, scope: scopeOf(ctx.user) });
+      return removed;
     }),
     update: moduleProcedure("partners", "update")
       .input(z.object({ id: z.number().int().positive(), data: partnerInput }))
@@ -190,9 +231,12 @@ export const adminRouter = router({
         if (!(await isPartnerInScope(input.id, scopeOf(ctx.user), true))) throw forbiddenScope();
         if (!scopeAllows(scopeOf(ctx.user), { entityId: input.data.entityId ?? null, partnerId: input.id }, true)) throw forbiddenScope();
         const { logo, ...data } = input.data;
+        const before = await getPartnerById(input.id);
         await updatePartner(input.id, data);
         const saved = logo ? await uploadPartnerLogo(input.id, logo) : await getPartnerById(input.id);
-        return saved ? publicPartner(saved) : saved;
+        const visible = saved ? publicPartner(saved) : saved;
+        await audit(ctx, { action: "update", resourceType: "partner", resourceId: input.id, resourceLabel: saved?.displayName, before: before ? publicPartner(before) : before, after: visible, scope: scopeOf(ctx.user) });
+        return visible;
       }),
   }),
 
@@ -211,7 +255,8 @@ export const adminRouter = router({
       )
       .query(({ input, ctx }) => listCoupons({ ...(input ?? {}), scope: scopeOf(ctx.user) })),
     create: moduleProcedure("coupons", "create").input(couponInput).mutation(async ({ input, ctx }) => {
-      if (!(await getPartnerById(input.partnerId))) throw notFound("Parceiro");
+      const partner = await getPartnerById(input.partnerId);
+      if (!partner) throw notFound("Parceiro");
       if (!(await isPartnerInScope(input.partnerId, scopeOf(ctx.user), true))) throw forbiddenScope();
       if (input.storeId && !(await isStoreInScope(input.storeId, scopeOf(ctx.user), true))) throw forbiddenScope();
       if (input.storeId) {
@@ -222,7 +267,10 @@ export const adminRouter = router({
       const coupon = await createCoupon(data);
       if (!coupon) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar o cupom" });
       const saved = itemImage ? await uploadCouponItemImage(coupon.id, itemImage) : coupon;
-      return saved ? publicCoupon(saved) : saved;
+      const visible = saved ? publicCoupon(saved) : saved;
+      await audit(ctx, { action: "create", resourceType: "coupon", resourceId: coupon.id, resourceLabel: coupon.code, after: visible, scope: scopeOf(ctx.user) });
+      await dispatchEmailEvent(ctx, "coupon.created", partner.email, { "coupon.id": coupon.id, "coupon.code": coupon.code, "coupon.title": coupon.title, "coupon.status": coupon.status }, `coupon:${coupon.id}:created`);
+      return visible;
     }),
     update: moduleProcedure("coupons", "update")
       .input(z.object({ id: z.number().int().positive(), data: couponInput }))
@@ -237,29 +285,44 @@ export const adminRouter = router({
           if (!store || store.partnerId !== input.data.partnerId) throw new TRPCError({ code: "BAD_REQUEST", message: "A loja precisa pertencer ao parceiro selecionado" });
         }
         const { itemImage, ...data } = input.data;
+        const before = await getCouponById(input.id);
         await updateCoupon(input.id, data);
         const saved = itemImage ? await uploadCouponItemImage(input.id, itemImage) : await getCouponById(input.id);
-        return saved ? publicCoupon(saved) : saved;
+        const visible = saved ? publicCoupon(saved) : saved;
+        await audit(ctx, { action: "update", resourceType: "coupon", resourceId: input.id, resourceLabel: saved?.code, before: before ? publicCoupon(before) : before, after: visible, scope: scopeOf(ctx.user) });
+        return visible;
       }),
     remove: moduleProcedure("coupons", "delete").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
       if (!(await isCouponInScope(input.id, scopeOf(ctx.user), true))) throw forbiddenScope();
-      return deleteCoupon(input.id);
+      const before = await getCouponById(input.id);
+      const removed = await deleteCoupon(input.id);
+      await audit(ctx, { action: "delete", resourceType: "coupon", resourceId: input.id, resourceLabel: before?.code, before: before ? publicCoupon(before) : before, after: removed ? publicCoupon(removed) : removed, scope: scopeOf(ctx.user) });
+      return removed;
     }),
     updateStatus: moduleProcedure("coupons", "status")
       .input(z.object({ id: z.number().int().positive(), status: couponStatus }))
       .mutation(async ({ input, ctx }) => {
         if (!(await getCouponById(input.id))) throw notFound("Cupom");
         if (!(await isCouponInScope(input.id, scopeOf(ctx.user), true))) throw forbiddenScope();
-        return updateCouponStatus(input.id, input.status);
+        const before = await getCouponById(input.id);
+        const updated = await updateCouponStatus(input.id, input.status);
+        await audit(ctx, { action: "status_change", resourceType: "coupon", resourceId: input.id, resourceLabel: before?.code, before: before ? publicCoupon(before) : before, after: updated ? publicCoupon(updated) : updated, scope: scopeOf(ctx.user) });
+        const partner = updated ? await getPartnerById(updated.partnerId) : null;
+        if (before?.status === "draft" && updated?.status === "active") await dispatchEmailEvent(ctx, "coupon.published", partner?.email, { "coupon.id": updated.id, "coupon.code": updated.code, "coupon.status": updated.status }, `coupon:${updated.id}:published`);
+        if (before?.status === "paused" && updated?.status === "active") await dispatchEmailEvent(ctx, "coupon.activated", partner?.email, { "coupon.id": updated.id, "coupon.code": updated.code, "coupon.status": updated.status }, `coupon:${updated.id}:activated`);
+        return updated;
       }),
   }),
 
   integrations: router({
-    list: moduleProcedure("integrations", "read").query(() => listPartnerIntegrations()),
+    list: moduleProcedure("integrations", "read").query(({ ctx }) => listPartnerIntegrations(scopeOf(ctx.user))),
     create: moduleProcedure("integrations", "manage").input(integrationInput).mutation(async ({ input, ctx }) => {
       if (!(await getPartnerById(input.partnerId))) throw notFound("Parceiro");
+      if (!(await isPartnerInScope(input.partnerId, scopeOf(ctx.user), true))) throw forbiddenScope();
       try {
-        return await createPartnerIntegration({ ...input, createdByUserId: ctx.user.id });
+        const created = await createPartnerIntegration({ ...input, createdByUserId: ctx.user.id });
+        await audit(ctx, { action: "create", resourceType: "integration", resourceId: created.integration.id, resourceLabel: created.integration.name, after: created.integration, scope: scopeOf(ctx.user) });
+        return created;
       } catch (error) {
         if ((error as { code?: string }).code === "ER_DUP_ENTRY") {
           throw new TRPCError({ code: "CONFLICT", message: "Este endpoint já está cadastrado para o parceiro" });
@@ -271,8 +334,17 @@ export const adminRouter = router({
 
   entities: router({
     list: moduleProcedure("entities", "read").query(({ ctx }) => listEntities(scopeOf(ctx.user))),
-    create: moduleProcedure("entities", "manage").input(entityInput).mutation(({ input }) => createEntity(input)),
-    remove: moduleProcedure("entities", "delete").input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => deleteEntity(input.id)),
+    create: moduleProcedure("entities", "manage").input(entityInput).mutation(async ({ input, ctx }) => {
+      const created = await createEntity(input);
+      await audit(ctx, { action: "create", resourceType: "entity", resourceId: created?.id, resourceLabel: created?.name, after: created, scope: scopeOf(ctx.user) });
+      return created;
+    }),
+    remove: moduleProcedure("entities", "delete").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+      const before = (await listEntities(scopeOf(ctx.user))).find(entity => entity.id === input.id);
+      const removed = await deleteEntity(input.id);
+      await audit(ctx, { action: "delete", resourceType: "entity", resourceId: input.id, resourceLabel: before?.name, before, after: removed, scope: scopeOf(ctx.user) });
+      return removed;
+    }),
   }),
 
   stores: router({
@@ -280,26 +352,36 @@ export const adminRouter = router({
     create: moduleProcedure("stores", "create").input(storeInput).mutation(async ({ input, ctx }) => {
       if (!(await getPartnerById(input.partnerId))) throw notFound("Parceiro");
       if (!(await isPartnerInScope(input.partnerId, scopeOf(ctx.user), true))) throw forbiddenScope();
-      return createPartnerStore(input);
+      const created = await createPartnerStore(input);
+      await audit(ctx, { action: "create", resourceType: "store", resourceId: created?.id, resourceLabel: created?.name, after: created, scope: scopeOf(ctx.user) });
+      return created;
     }),
     remove: moduleProcedure("stores", "delete").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
       if (!(await isStoreInScope(input.id, scopeOf(ctx.user), true))) throw forbiddenScope();
-      return deletePartnerStore(input.id);
+      const before = await getPartnerStoreById(input.id);
+      const removed = await deletePartnerStore(input.id);
+      await audit(ctx, { action: "delete", resourceType: "store", resourceId: input.id, resourceLabel: before?.name, before, after: removed, scope: scopeOf(ctx.user) });
+      return removed;
     }),
     update: moduleProcedure("stores", "update").input(z.object({ id: z.number().int().positive(), data: storeInput })).mutation(async ({ input, ctx }) => {
       if (!(await getPartnerStoreById(input.id))) throw notFound("Loja");
       if (!(await isStoreInScope(input.id, scopeOf(ctx.user), true))) throw forbiddenScope();
       if (!(await getPartnerById(input.data.partnerId))) throw notFound("Parceiro");
       if (!(await isPartnerInScope(input.data.partnerId, scopeOf(ctx.user), true))) throw forbiddenScope();
-      return updatePartnerStore(input.id, input.data);
+      const before = await getPartnerStoreById(input.id);
+      const updated = await updatePartnerStore(input.id, input.data);
+      await audit(ctx, { action: "update", resourceType: "store", resourceId: input.id, resourceLabel: updated?.name, before, after: updated, scope: scopeOf(ctx.user) });
+      return updated;
     }),
   }),
 
   access: router({
     list: moduleProcedure("access", "manage").query(({ ctx }) => listAccessUsers(scopeOf(ctx.user))),
     update: moduleProcedure("access", "manage").input(z.object({ id: z.number().int().positive(), data: userAccessInput })).mutation(async ({ input, ctx }) => {
+      const current = (await listAccessUsers(scopeOf(ctx.user))).find(user => user.id === input.id);
       const updated = await updateUserAccess(input.id, input.data, scopeOf(ctx.user));
       if (!updated) throw forbiddenScope();
+      await audit(ctx, { action: "update", resourceType: "access", resourceId: input.id, resourceLabel: updated.email, before: current, after: updated, scope: scopeOf(ctx.user) });
       return updated;
     }),
     invites: router({
@@ -320,23 +402,102 @@ export const adminRouter = router({
         }
         const created = await createLoginInvite({ email: input.email, accessLevel: input.accessLevel, entityId: input.entityId ?? null, partnerId: input.partnerId ?? null, storeId: input.storeId ?? null, expiresAt: new Date(Date.now() + input.expiresInDays * 24 * 60 * 60 * 1000), invitedByUserId: ctx.user.id });
         if (!created) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar o convite" });
+        await audit(ctx, { action: "create", resourceType: "login_invite", resourceId: created.invite.id, resourceLabel: created.invite.email, after: created.invite, scope: scopeOf(ctx.user) });
+        await dispatchEmailEvent(ctx, "login_invite.created", created.invite.email, { "invite.email": created.invite.email, "invite.accessLevel": created.invite.accessLevel }, `invite:${created.invite.id}:created`);
         return { ...created.invite, inviteUrl: `${input.origin.replace(/\/$/, "")}/convite?token=${encodeURIComponent(created.token)}` };
       }),
       resend: moduleProcedure("access", "manage").input(z.object({ id: z.number().int().positive(), origin: z.string().url() })).mutation(async ({ input, ctx }) => {
         if (!(await isLoginInviteInScope(input.id, scopeOf(ctx.user)))) throw forbiddenScope();
+        const before = (await listLoginInvites(scopeOf(ctx.user))).find(invite => invite.id === input.id);
         const created = await resendLoginInvite(input.id, ctx.user.id);
         if (!created) throw new TRPCError({ code: "NOT_FOUND", message: "Convite não encontrado" });
+        await audit(ctx, { action: "resend", resourceType: "login_invite", resourceId: input.id, resourceLabel: created.invite.email, before, after: created.invite, scope: scopeOf(ctx.user) });
         return { ...created.invite, inviteUrl: `${input.origin.replace(/\/$/, "")}/convite?token=${encodeURIComponent(created.token)}` };
       }),
       revoke: moduleProcedure("access", "manage").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
         if (!(await isLoginInviteInScope(input.id, scopeOf(ctx.user)))) throw forbiddenScope();
-        return revokeLoginInvite(input.id);
+        const before = (await listLoginInvites(scopeOf(ctx.user))).find(invite => invite.id === input.id);
+        const revoked = await revokeLoginInvite(input.id);
+        await audit(ctx, { action: "revoke", resourceType: "login_invite", resourceId: input.id, resourceLabel: before?.email, before, after: revoked, scope: scopeOf(ctx.user) });
+        return revoked;
       }),
       activate: moduleProcedure("access", "manage").input(z.object({ id: z.number().int().positive(), userId: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
         if (!(await isLoginInviteInScope(input.id, scopeOf(ctx.user)))) throw forbiddenScope();
+        const before = (await listLoginInvites(scopeOf(ctx.user))).find(invite => invite.id === input.id);
         const activated = await activateLoginInvite(input.id, input.userId);
         if (!activated) throw new TRPCError({ code: "BAD_REQUEST", message: "O e-mail do usuário não corresponde ao convite ou o convite não está mais disponível" });
+        await audit(ctx, { action: "activate", resourceType: "login_invite", resourceId: input.id, resourceLabel: before?.email, before, after: activated, scope: scopeOf(ctx.user) });
         return activated;
+      }),
+    }),
+  }),
+
+  audit: router({
+    list: moduleProcedure("audit", "read").input(z.object({ resourceType: auditResource.optional(), resourceId: z.number().int().positive().optional(), limit: z.number().int().min(1).max(200).optional() }).optional()).query(({ input }) => listAuditLogs(input)),
+  }),
+
+  emails: router({
+    senders: router({
+      list: moduleProcedure("emails", "read").query(() => listEmailSenders()),
+      create: moduleProcedure("emails", "manage").input(emailSenderInput).mutation(async ({ input, ctx }) => {
+        const sender = await createEmailSender({ ...input, fromEmail: input.fromEmail.trim().toLowerCase(), replyTo: input.replyTo?.trim().toLowerCase() ?? null, createdByUserId: ctx.user.id });
+        await audit(ctx, { action: "create", resourceType: "email_sender", resourceId: sender?.id, resourceLabel: sender?.name, after: sender });
+        return sender;
+      }),
+    }),
+    templates: router({
+      list: moduleProcedure("emails", "read").query(() => listEmailTemplates()),
+      create: moduleProcedure("emails", "manage").input(emailTemplateInput).mutation(async ({ input, ctx }) => {
+        const validated = validateEmailTemplate(input);
+        const template = await createEmailTemplate({ ...validated, preheader: validated.preheader ?? null, bodyText: validated.bodyText ?? null, senderId: validated.senderId ?? null, createdByUserId: ctx.user.id });
+        await audit(ctx, { action: "create", resourceType: "email_template", resourceId: template?.id, resourceLabel: template?.templateKey, after: template });
+        return template;
+      }),
+      update: moduleProcedure("emails", "manage").input(z.object({ id: z.number().int().positive(), data: emailTemplateInput })).mutation(async ({ input, ctx }) => {
+        const before = await getEmailTemplateById(input.id);
+        if (!before) throw notFound("Template de e-mail");
+        const validated = validateEmailTemplate(input.data);
+        const template = await updateEmailTemplate(input.id, { ...validated, preheader: validated.preheader ?? null, bodyText: validated.bodyText ?? null, senderId: validated.senderId ?? null });
+        await audit(ctx, { action: "update", resourceType: "email_template", resourceId: input.id, resourceLabel: template?.templateKey, before, after: template });
+        return template;
+      }),
+      preview: moduleProcedure("emails", "read").input(emailTemplateInput.extend({ variables: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]).nullable()) })).mutation(({ input }) => {
+        const validated = validateEmailTemplate(input);
+        return { subject: renderEmailText(validated.subject, input.variables as EmailVariables), preheader: validated.preheader ? renderEmailText(validated.preheader, input.variables as EmailVariables) : null, html: renderEmail(validated.bodyHtml, input.variables as EmailVariables), text: input.bodyText ? renderEmailText(input.bodyText, input.variables as EmailVariables) : null };
+      }),
+    }),
+    rules: router({
+      list: moduleProcedure("emails", "read").query(() => listEmailRules()),
+      create: moduleProcedure("emails", "manage").input(emailRuleInput).mutation(async ({ input, ctx }) => {
+        const rule = await createEmailRule({ ...input, enabled: input.enabled ? 1 : 0, createdByUserId: ctx.user.id });
+        await audit(ctx, { action: "create", resourceType: "email_rule", resourceId: rule?.id, resourceLabel: rule?.name, after: rule });
+        return rule;
+      }),
+      update: moduleProcedure("emails", "manage").input(z.object({ id: z.number().int().positive(), data: emailRuleInput })).mutation(async ({ input, ctx }) => {
+        const rule = await updateEmailRule(input.id, { ...input.data, enabled: input.data.enabled ? 1 : 0 });
+        if (!rule) throw notFound("Regra de e-mail");
+        await audit(ctx, { action: "update", resourceType: "email_rule", resourceId: input.id, resourceLabel: rule.name, after: rule });
+        return rule;
+      }),
+    }),
+    outbox: router({
+      list: moduleProcedure("emails", "read").input(z.object({ status: z.enum(["queued", "simulated", "failed", "cancelled"]).optional(), limit: z.number().int().min(1).max(200).optional() }).optional()).query(({ input }) => listEmailOutbox(input)),
+      simulate: moduleProcedure("emails", "manage").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+        const row = await simulateEmailOutbox(input.id);
+        if (!row) throw notFound("Mensagem do outbox");
+        await audit(ctx, { action: "simulate", resourceType: "email_outbox", resourceId: input.id, resourceLabel: row.recipientEmail, after: row });
+        return row;
+      }),
+      retry: moduleProcedure("emails", "manage").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+        const row = await retryEmailOutbox(input.id);
+        if (!row) throw notFound("Mensagem do outbox");
+        await audit(ctx, { action: "update", resourceType: "email_outbox", resourceId: input.id, resourceLabel: row.recipientEmail, after: row });
+        return row;
+      }),
+      enqueue: moduleProcedure("emails", "manage").input(z.object({ eventName: emailEvent, recipientEmail: z.string().email(), recipientName: z.string().max(160).nullable().optional(), variables: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]).nullable()), eventKey: z.string().trim().min(1).max(180) })).mutation(async ({ input, ctx }) => {
+        const queued = await enqueueEmailRules({ eventName: input.eventName, recipientEmail: input.recipientEmail, recipientName: input.recipientName ?? null, variables: input.variables as EmailVariables, eventKey: input.eventKey, createdByUserId: ctx.user.id });
+        for (const item of queued) if (item.row) await audit(ctx, { action: "create", resourceType: "email_outbox", resourceId: item.row.id, resourceLabel: item.row.recipientEmail, after: item.row });
+        return queued.map(item => item.row).filter(Boolean);
       }),
     }),
   }),
@@ -392,6 +553,7 @@ export const adminRouter = router({
 
         try {
           const useId = await registerCouponUse({ ...input, registeredByUserId: ctx.user.id });
+          await dispatchEmailEvent(ctx, "coupon.redeemed", input.customerReference, { "coupon.id": coupon.id, "coupon.code": coupon.code, "coupon.status": coupon.status, "use.id": useId, "use.reference": input.reference }, `coupon:${coupon.id}:redeemed:${input.reference}`);
           return { id: useId };
         } catch (error) {
           if (error instanceof CouponUseRuleError) {

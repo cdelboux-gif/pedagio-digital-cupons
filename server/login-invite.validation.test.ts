@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./db", async importOriginal => {
   const actual = await importOriginal<typeof import("./db")>();
-  return { ...actual, createLoginInvite: vi.fn(), listLoginInvites: vi.fn(), revokeLoginInvite: vi.fn(), activateLoginInvite: vi.fn(), upsertUser: vi.fn(), getPendingLoginInvite: vi.fn(), getUserByOpenId: vi.fn() };
+  return { ...actual, createLoginInvite: vi.fn(), listLoginInvites: vi.fn(), revokeLoginInvite: vi.fn(), activateLoginInvite: vi.fn(), upsertUser: vi.fn(), getPendingLoginInvite: vi.fn(), getUserByOpenId: vi.fn(), appendAuditLog: vi.fn() };
 });
 
 import * as db from "./db";
@@ -31,6 +31,7 @@ beforeEach(() => {
   listLoginInvites.mockResolvedValue([safeInvite as typeof invite]);
   revokeLoginInvite.mockResolvedValue({ ...invite, status: "revoked", tokenHash: undefined } as typeof invite);
   activateLoginInvite.mockResolvedValue({ ...safeInvite, status: "accepted", acceptedUserId: 12 } as typeof invite);
+  vi.mocked(db.appendAuditLog).mockResolvedValue(undefined);
 });
 
 describe("login invite security", () => {

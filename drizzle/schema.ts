@@ -24,6 +24,11 @@ export const accessLevelValues = ["admin", "manager", "operator", "viewer"] as c
 export const entityStatusValues = ["active", "inactive"] as const;
 export const storeStatusValues = ["active", "inactive"] as const;
 export const loginInviteStatusValues = ["pending", "accepted", "revoked", "expired"] as const;
+export const auditActionValues = ["create", "update", "status_change", "delete", "revoke", "activate", "resend", "simulate"] as const;
+export const auditResourceValues = ["access", "login_invite", "entity", "partner", "store", "coupon", "integration", "email_sender", "email_template", "email_rule", "email_outbox"] as const;
+export const emailSenderStatusValues = ["active", "inactive"] as const;
+export const emailTemplateStatusValues = ["draft", "published", "archived"] as const;
+export const emailOutboxStatusValues = ["queued", "simulated", "failed", "cancelled"] as const;
 
 /** Core user table backing the Manus OAuth flow. */
 export const users = mysqlTable("users", {
@@ -228,6 +233,120 @@ export const couponUses = mysqlTable(
   ],
 );
 
+export const auditLogs = mysqlTable(
+  "auditLogs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    actorUserId: int("actorUserId").references(() => users.id, { onDelete: "set null" }),
+    actorEmail: varchar("actorEmail", { length: 320 }),
+    action: mysqlEnum("action", auditActionValues).notNull(),
+    resourceType: mysqlEnum("resourceType", auditResourceValues).notNull(),
+    resourceId: int("resourceId"),
+    resourceLabel: varchar("resourceLabel", { length: 240 }),
+    beforeJson: text("beforeJson"),
+    afterJson: text("afterJson"),
+    scopeJson: text("scopeJson"),
+    requestId: varchar("requestId", { length: 120 }),
+    ipAddress: varchar("ipAddress", { length: 64 }),
+    userAgent: varchar("userAgent", { length: 500 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [
+    index("audit_logs_actor_idx").on(table.actorUserId),
+    index("audit_logs_resource_idx").on(table.resourceType, table.resourceId),
+    index("audit_logs_created_idx").on(table.createdAt),
+  ],
+);
+
+export const emailSenders = mysqlTable(
+  "emailSenders",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 120 }).notNull(),
+    fromName: varchar("fromName", { length: 160 }).notNull(),
+    fromEmail: varchar("fromEmail", { length: 320 }).notNull(),
+    replyTo: varchar("replyTo", { length: 320 }),
+    status: mysqlEnum("status", emailSenderStatusValues).default("active").notNull(),
+    createdByUserId: int("createdByUserId").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [uniqueIndex("email_senders_from_email_uq").on(table.fromEmail)],
+);
+
+export const emailTemplates = mysqlTable(
+  "emailTemplates",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    templateKey: varchar("templateKey", { length: 100 }).notNull(),
+    name: varchar("name", { length: 160 }).notNull(),
+    status: mysqlEnum("status", emailTemplateStatusValues).default("draft").notNull(),
+    version: int("version").default(1).notNull(),
+    senderId: int("senderId").references(() => emailSenders.id, { onDelete: "set null" }),
+    subject: varchar("subject", { length: 240 }).notNull(),
+    preheader: varchar("preheader", { length: 240 }),
+    bodyHtml: text("bodyHtml").notNull(),
+    bodyText: text("bodyText"),
+    allowedVariablesJson: text("allowedVariablesJson").notNull(),
+    createdByUserId: int("createdByUserId").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    uniqueIndex("email_templates_key_version_uq").on(table.templateKey, table.version),
+    index("email_templates_status_idx").on(table.status),
+  ],
+);
+
+export const emailRules = mysqlTable(
+  "emailRules",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    templateId: int("templateId").notNull().references(() => emailTemplates.id, { onDelete: "restrict" }),
+    name: varchar("name", { length: 160 }).notNull(),
+    eventName: varchar("eventName", { length: 120 }).notNull(),
+    conditionsJson: text("conditionsJson").notNull(),
+    enabled: int("enabled").default(1).notNull(),
+    cooldownSeconds: int("cooldownSeconds").default(0).notNull(),
+    createdByUserId: int("createdByUserId").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index("email_rules_event_idx").on(table.eventName),
+    index("email_rules_template_idx").on(table.templateId),
+  ],
+);
+
+export const emailOutbox = mysqlTable(
+  "emailOutbox",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    idempotencyKey: varchar("idempotencyKey", { length: 180 }).notNull().unique(),
+    templateId: int("templateId").references(() => emailTemplates.id, { onDelete: "set null" }),
+    ruleId: int("ruleId").references(() => emailRules.id, { onDelete: "set null" }),
+    eventName: varchar("eventName", { length: 120 }).notNull(),
+    recipientEmail: varchar("recipientEmail", { length: 320 }).notNull(),
+    recipientName: varchar("recipientName", { length: 160 }),
+    variablesJson: text("variablesJson").notNull(),
+    renderedSubject: varchar("renderedSubject", { length: 240 }).notNull(),
+    renderedHtml: text("renderedHtml").notNull(),
+    renderedText: text("renderedText"),
+    status: mysqlEnum("status", emailOutboxStatusValues).default("queued").notNull(),
+    attempts: int("attempts").default(0).notNull(),
+    lastError: text("lastError"),
+    availableAt: datetime("availableAt").notNull(),
+    processedAt: datetime("processedAt"),
+    createdByUserId: int("createdByUserId").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index("email_outbox_status_idx").on(table.status, table.availableAt),
+    index("email_outbox_event_idx").on(table.eventName),
+  ],
+);
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Partner = typeof partners.$inferSelect;
@@ -237,3 +356,8 @@ export type Coupon = typeof coupons.$inferSelect;
 export type CouponUse = typeof couponUses.$inferSelect;
 export type PartnerIntegration = typeof partnerIntegrations.$inferSelect;
 export type LoginInvite = typeof loginInvites.$inferSelect;
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type EmailSender = typeof emailSenders.$inferSelect;
+export type EmailTemplate = typeof emailTemplates.$inferSelect;
+export type EmailRule = typeof emailRules.$inferSelect;
+export type EmailOutbox = typeof emailOutbox.$inferSelect;

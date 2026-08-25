@@ -158,3 +158,38 @@
 - [x] Adicionar testes tRPC de access.list/update e invites.resend/revoke/activate para escopos permitidos e bloqueados.
 - [x] Adicionar testes de sucesso para exclusão lógica de parceiro, loja e cupom.
 - [x] Registrar claramente a validação por perfil; quando não houver sessão navegável distinta, manter a evidência como cobertura automatizada e não como teste manual.
+
+
+## Auditoria e e-mails personalizados
+
+- [x] Ler as orientações de automação, armazenamento e configuração de conectores antes de definir disparos.
+- [x] Modelar log de auditoria para alterações de níveis, escopos e convites, com ator, alvo, antes/depois, origem e timestamp.
+- [x] Registrar auditoria de criação, edição, revogação, ativação e exclusão lógica de acessos/escopos.
+- [x] Modelar remetente/domínio, templates versionados, variáveis permitidas, regras de evento/condição e registros idempotentes de envio.
+- [x] Criar módulo administrativo para customização de estrutura, assunto, preheader, corpo e variáveis dos e-mails.
+- [x] Implementar disparos por eventos do domínio e regras controladas, sem duplicidade e com status de entrega.
+- [x] Proteger dados sensíveis, limitar HTML/variáveis e restringir configuração e visualização conforme o nível de acesso.
+- [x] Criar testes de auditoria, templates, regras, idempotência, autorização e segurança.
+- [x] Validar visualmente desktop/mobile e publicar a expansão.
+
+
+## Outbox interno de e-mails
+
+- [x] Modelar remetentes, templates versionados, variáveis permitidas, regras de evento/condição e mensagens do outbox.
+- [x] Implementar editor de estrutura de e-mail com assunto, preheader, blocos e preview seguro.
+- [x] Implementar criação de mensagens por evento/regra com chave idempotente e status de fila.
+- [x] Implementar simulação de envio, reprocessamento controlado e histórico de tentativas sem provedor externo.
+- [ ] Criar adaptador de transporte desacoplado para conexão futura com Resend ou Elastic Email.
+- [x] Registrar auditoria de alterações de níveis, escopos, convites, templates, regras e ações do outbox.
+- [x] Criar telas de auditoria, templates, regras e mensagens pendentes/enviadas.
+- [x] Testar segurança, autorização, sanitização de HTML, variáveis, idempotência e responsividade.
+
+## Continuação: interfaces e validação da expansão de auditoria/e-mails
+
+- [x] Conectar a aceitação automática de convite OAuth à trilha de auditoria.
+- [x] Criar a página administrativa `/auditoria` com filtros, estados vazios e comparação antes/depois.
+- [x] Criar a página administrativa `/emails` com remetentes, templates, preview, regras e outbox.
+- [x] Cobrir o helper de auditoria com teste de redaction e ator inexistente.
+- [x] Cobrir o módulo de e-mails com testes de sanitização, variáveis, matching e idempotência.
+- [x] Validar as novas páginas no desktop e mobile e publicar um checkpoint da expansão.
+- [x] Completar auditoria das mutações críticas de entidades, parceiros, lojas, cupons e integrações, além de acessos e convites.

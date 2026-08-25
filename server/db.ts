@@ -24,15 +24,26 @@ import {
   partnerIntegrations,
   partnerStores,
   loginInvites,
+  auditLogs,
+  emailSenders,
+  emailTemplates,
+  emailRules,
+  emailOutbox,
   type InsertUser,
   partners,
   type PartnerStore,
   type LoginInvite,
+  type AuditLog,
+  type EmailSender,
+  type EmailTemplate,
+  type EmailRule,
+  type EmailOutbox,
   users,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { storagePut } from "./storage";
 import type { AccessLevel } from "../shared/permissions";
+import { buildEmailIdempotencyKey, matchEmailConditions, normalizeEmailAddress, renderEmail, renderEmailText, sanitizeEmailHtml, type EmailCondition, type EmailEventName, type EmailVariables } from "./email";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -581,12 +592,18 @@ export function publicIntegration(row: typeof partnerIntegrations.$inferSelect) 
   };
 }
 
-export async function listPartnerIntegrations() {
+export async function listPartnerIntegrations(scope?: AccessScope) {
   const db = await requireDb();
+  const conditions: SQL[] = [];
+  if (scope && !isGlobalScope(scope)) {
+    if (scope.entityId) conditions.push(eq(partners.entityId, scope.entityId));
+    if (scope.partnerId) conditions.push(eq(partnerIntegrations.partnerId, scope.partnerId));
+  }
   const rows = await db
     .select({ integration: partnerIntegrations, partnerName: partners.displayName })
     .from(partnerIntegrations)
     .innerJoin(partners, eq(partners.id, partnerIntegrations.partnerId))
+    .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(desc(partnerIntegrations.updatedAt));
 
   return rows.map(({ integration, partnerName }) => ({
@@ -848,4 +865,200 @@ export async function getDashboardSummary(scope?: AccessScope) {
     registeredUses: useTotal,
     recentUses: recentUses.slice(0, 5),
   };
+}
+
+
+export type AuditLogInput = {
+  actorUserId?: number | null;
+  actorEmail?: string | null;
+  action: "create" | "update" | "status_change" | "delete" | "revoke" | "activate" | "resend" | "simulate";
+  resourceType: "access" | "login_invite" | "entity" | "partner" | "store" | "coupon" | "integration" | "email_sender" | "email_template" | "email_rule" | "email_outbox";
+  resourceId?: number | null;
+  resourceLabel?: string | null;
+  before?: unknown;
+  after?: unknown;
+  scope?: unknown;
+  requestId?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+};
+
+const auditSensitiveKeys = new Set(["tokenHash", "secretHash", "password", "apiKey", "authorization", "dataUrl"]);
+
+export function redactAuditValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactAuditValue);
+  if (!value || typeof value !== "object") return value;
+  const output: Record<string, unknown> = {};
+  for (const [key, nested] of Object.entries(value)) {
+    if (auditSensitiveKeys.has(key)) continue;
+    output[key] = redactAuditValue(nested);
+  }
+  return output;
+}
+
+function auditJson(value: unknown) {
+  if (value == null) return null;
+  return JSON.stringify(redactAuditValue(value));
+}
+
+export async function appendAuditLog(input: AuditLogInput) {
+  const db = await requireDb();
+  let actorUserId = input.actorUserId ?? null;
+  if (actorUserId !== null) {
+    const actor = await db.select({ id: users.id }).from(users).where(eq(users.id, actorUserId)).limit(1);
+    actorUserId = actor[0]?.id ?? null;
+  }
+  await db.insert(auditLogs).values({
+    actorUserId,
+    actorEmail: input.actorEmail ?? null,
+    action: input.action,
+    resourceType: input.resourceType,
+    resourceId: input.resourceId ?? null,
+    resourceLabel: input.resourceLabel ?? null,
+    beforeJson: auditJson(input.before),
+    afterJson: auditJson(input.after),
+    scopeJson: auditJson(input.scope),
+    requestId: input.requestId ?? null,
+    ipAddress: input.ipAddress ?? null,
+    userAgent: input.userAgent ?? null,
+  });
+}
+
+export async function listAuditLogs(filters?: { resourceType?: AuditLogInput["resourceType"]; resourceId?: number; limit?: number }) {
+  const db = await requireDb();
+  const conditions: SQL[] = [];
+  if (filters?.resourceType) conditions.push(eq(auditLogs.resourceType, filters.resourceType));
+  if (filters?.resourceId) conditions.push(eq(auditLogs.resourceId, filters.resourceId));
+  const rows = await db.select().from(auditLogs).where(conditions.length ? and(...conditions) : undefined).orderBy(desc(auditLogs.createdAt)).limit(Math.min(filters?.limit ?? 100, 200));
+  return rows;
+}
+
+type EmailSenderInput = Pick<EmailSender, "name" | "fromName" | "fromEmail" | "replyTo" | "status">;
+export async function listEmailSenders() {
+  const db = await requireDb();
+  return db.select().from(emailSenders).orderBy(desc(emailSenders.updatedAt));
+}
+export async function createEmailSender(input: EmailSenderInput & { createdByUserId: number }) {
+  const db = await requireDb();
+  const result = await db.insert(emailSenders).values(input);
+  const rows = await db.select().from(emailSenders).where(eq(emailSenders.id, Number(result[0].insertId))).limit(1);
+  return rows[0];
+}
+
+export type EmailTemplateInput = Pick<EmailTemplate, "templateKey" | "name" | "status" | "version" | "senderId" | "subject" | "preheader" | "bodyHtml" | "bodyText"> & { allowedVariables: string[]; createdByUserId: number };
+export async function listEmailTemplates() {
+  const db = await requireDb();
+  return db.select().from(emailTemplates).orderBy(desc(emailTemplates.updatedAt));
+}
+export async function getEmailTemplateById(id: number) {
+  const db = await requireDb();
+  const rows = await db.select().from(emailTemplates).where(eq(emailTemplates.id, id)).limit(1);
+  return rows[0];
+}
+export async function createEmailTemplate(input: EmailTemplateInput) {
+  const db = await requireDb();
+  const result = await db.insert(emailTemplates).values({ ...input, allowedVariablesJson: JSON.stringify(input.allowedVariables) });
+  return getEmailTemplateById(Number(result[0].insertId));
+}
+export async function updateEmailTemplate(id: number, input: Omit<EmailTemplateInput, "createdByUserId">) {
+  const db = await requireDb();
+  await db.update(emailTemplates).set({ ...input, allowedVariablesJson: JSON.stringify(input.allowedVariables) }).where(eq(emailTemplates.id, id));
+  return getEmailTemplateById(id);
+}
+
+export type EmailRuleInput = Pick<EmailRule, "templateId" | "name" | "eventName" | "enabled" | "cooldownSeconds"> & { conditions: EmailCondition[]; createdByUserId: number };
+export async function listEmailRules() {
+  const db = await requireDb();
+  return db.select().from(emailRules).orderBy(desc(emailRules.updatedAt));
+}
+export async function createEmailRule(input: EmailRuleInput) {
+  const db = await requireDb();
+  const result = await db.insert(emailRules).values({ ...input, conditionsJson: JSON.stringify(input.conditions) });
+  const rows = await db.select().from(emailRules).where(eq(emailRules.id, Number(result[0].insertId))).limit(1);
+  return rows[0];
+}
+export async function updateEmailRule(id: number, input: Omit<EmailRuleInput, "createdByUserId">) {
+  const db = await requireDb();
+  await db.update(emailRules).set({ ...input, conditionsJson: JSON.stringify(input.conditions) }).where(eq(emailRules.id, id));
+  const rows = await db.select().from(emailRules).where(eq(emailRules.id, id)).limit(1);
+  return rows[0];
+}
+
+export type EmailOutboxInput = {
+  eventName: EmailEventName;
+  recipientEmail: string;
+  recipientName?: string | null;
+  variables: EmailVariables;
+  templateId?: number | null;
+  ruleId?: number | null;
+  eventKey: string;
+  createdByUserId?: number | null;
+};
+
+export async function enqueueEmailMessage(input: EmailOutboxInput) {
+  const db = await requireDb();
+  const recipientEmail = normalizeEmailAddress(input.recipientEmail);
+  const template = input.templateId ? await getEmailTemplateById(input.templateId) : null;
+  if (!template) throw new Error("Template de e-mail não encontrado");
+  const allowedVariables = JSON.parse(template.allowedVariablesJson) as string[];
+  const checked = { subject: template.subject, preheader: template.preheader, bodyHtml: template.bodyHtml, allowedVariables };
+  const safeTemplate = { ...checked, bodyHtml: sanitizeEmailHtml(checked.bodyHtml) };
+  const renderedSubject = renderEmailText(safeTemplate.subject, input.variables);
+  const renderedHtml = renderEmail(safeTemplate.bodyHtml, input.variables);
+  const renderedText = template.bodyText ? renderEmailText(template.bodyText, input.variables) : null;
+  const idempotencyKey = buildEmailIdempotencyKey(input.eventName, recipientEmail, input.ruleId ?? null, input.eventKey);
+  try {
+    const result = await db.insert(emailOutbox).values({
+      idempotencyKey,
+      templateId: template.id,
+      ruleId: input.ruleId ?? null,
+      eventName: input.eventName,
+      recipientEmail,
+      recipientName: input.recipientName ?? null,
+      variablesJson: JSON.stringify(input.variables),
+      renderedSubject,
+      renderedHtml,
+      renderedText,
+      status: "queued",
+      attempts: 0,
+      availableAt: new Date(),
+      createdByUserId: input.createdByUserId ?? null,
+    });
+    const rows = await db.select().from(emailOutbox).where(eq(emailOutbox.id, Number(result[0].insertId))).limit(1);
+    return { created: true, row: rows[0] };
+  } catch (error) {
+    if ((error as { code?: string }).code !== "ER_DUP_ENTRY") throw error;
+    const rows = await db.select().from(emailOutbox).where(eq(emailOutbox.idempotencyKey, idempotencyKey)).limit(1);
+    return { created: false, row: rows[0] };
+  }
+}
+
+export async function enqueueEmailRules(input: { eventName: EmailEventName; recipientEmail: string; recipientName?: string | null; variables: EmailVariables; eventKey: string; createdByUserId?: number | null }) {
+  const db = await requireDb();
+  const rules = await db.select().from(emailRules).where(and(eq(emailRules.eventName, input.eventName), eq(emailRules.enabled, 1)));
+  const queued: Array<{ created: boolean; row: EmailOutbox | undefined }> = [];
+  for (const rule of rules) {
+    const conditions = JSON.parse(rule.conditionsJson) as EmailCondition[];
+    if (!matchEmailConditions(conditions, input.variables)) continue;
+    queued.push(await enqueueEmailMessage({ ...input, templateId: rule.templateId, ruleId: rule.id }));
+  }
+  return queued;
+}
+
+export async function listEmailOutbox(filters?: { status?: EmailOutbox["status"]; limit?: number }) {
+  const db = await requireDb();
+  return db.select().from(emailOutbox).where(filters?.status ? eq(emailOutbox.status, filters.status) : undefined).orderBy(desc(emailOutbox.createdAt)).limit(Math.min(filters?.limit ?? 100, 200));
+}
+export async function simulateEmailOutbox(id: number) {
+  const db = await requireDb();
+  const now = new Date();
+  await db.update(emailOutbox).set({ status: "simulated", attempts: sql`${emailOutbox.attempts} + 1`, processedAt: now, updatedAt: now }).where(and(eq(emailOutbox.id, id), or(eq(emailOutbox.status, "queued"), eq(emailOutbox.status, "failed"))));
+  const rows = await db.select().from(emailOutbox).where(eq(emailOutbox.id, id)).limit(1);
+  return rows[0];
+}
+export async function retryEmailOutbox(id: number) {
+  const db = await requireDb();
+  await db.update(emailOutbox).set({ status: "queued", lastError: null, availableAt: new Date() }).where(eq(emailOutbox.id, id));
+  const rows = await db.select().from(emailOutbox).where(eq(emailOutbox.id, id)).limit(1);
+  return rows[0];
 }

@@ -59,7 +59,20 @@ export function registerOAuthRoutes(app: Express) {
 
       if (invite && inviteToken) {
         const syncedUser = await db.getUserByOpenId(userInfo.openId);
-        if (syncedUser) await db.acceptLoginInvite(userInfo.email!, inviteToken, syncedUser.id);
+        if (syncedUser) {
+          await db.acceptLoginInvite(userInfo.email!, inviteToken, syncedUser.id);
+          await db.appendAuditLog({
+            actorUserId: syncedUser.id,
+            actorEmail: syncedUser.email ?? userInfo.email ?? null,
+            action: "activate",
+            resourceType: "login_invite",
+            resourceId: invite.id,
+            resourceLabel: invite.email,
+            before: invite,
+            after: { ...invite, status: "accepted", acceptedUserId: syncedUser.id, acceptedAt: new Date() },
+            scope: { accessLevel: syncedUser.accessLevel, entityId: syncedUser.entityId, partnerId: syncedUser.partnerId, storeId: syncedUser.storeId },
+          });
+        }
       }
       res.clearCookie(LOGIN_INVITE_COOKIE, { path: "/", secure: true, sameSite: "lax" });
 
