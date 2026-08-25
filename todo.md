@@ -246,3 +246,5 @@
 - [x] Adicionar métricas segmentadas por parceiro, loja, pedágio/região e período no backend.
 - [x] Expandir `/inteligencia` com filtros de período e recortes por parceiro/loja/região, incluindo estados vazio e erro.
 - [x] Cobrir os insights segmentados com testes de escopo e exclusão de simulações.
+- [x] Criar contrato compartilhado `recommendations.v1` para `toll.passed` e resposta de recomendações.
+- [x] Testar versão, idempotência, precisão, consentimento e identificação de patrocínio no contrato compartilhado.
