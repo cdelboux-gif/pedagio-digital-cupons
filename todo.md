@@ -149,7 +149,7 @@
 - [x] Sincronizar visibilidade da navegação e ações da interface com as permissões efetivas.
 - [x] Criar testes da matriz CRUD, módulos e escopos cruzados.
 - [x] Validar regras com perfis Administrador, Gestor, Operação e Consulta por testes automatizados e sessão administrativa.
-- [ ] Publicar a correção no próximo checkpoint.
+- [x] Publicar a correção no checkpoint 2cbae16a.
 
 - [x] Aplicar escopo hierárquico às rotas de acessos e convites, permitindo gestão somente dentro da árvore autorizada.
 - [x] Aplicar gating de ações em Entidades, Lojas e Acessos conforme a matriz efetiva.
