@@ -248,3 +248,13 @@
 - [x] Cobrir os insights segmentados com testes de escopo e exclusão de simulações.
 - [x] Criar contrato compartilhado `recommendations.v1` para `toll.passed` e resposta de recomendações.
 - [x] Testar versão, idempotência, precisão, consentimento e identificação de patrocínio no contrato compartilhado.
+
+## Consentimento no app: personalização e geolocalização
+
+- [x] Redigir termo amigável de opt-in com finalidades separadas para personalização e geolocalização.
+- [x] Definir escolhas granulares, sem checkbox pré-marcado e sem condicionar o serviço essencial ao consentimento opcional.
+- [x] Definir tela de preferências, revogação fácil e estados de localização em uso, pausada e desativada.
+- [x] Definir registro versionado do consentimento, texto apresentado, data/hora, origem, versão do app e finalidade.
+- [x] Definir sincronização da revogação com cache local, fila offline e recomendações personalizadas.
+- [x] Criar contrato técnico de preferências para o app e o backoffice.
+- [ ] Revisar o modelo com o encarregado de dados ou advogado antes de uso em produção.
