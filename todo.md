@@ -260,3 +260,20 @@
 - [ ] Revisar o modelo com o encarregado de dados ou advogado antes de uso em produção.
 - [x] Implementar contrato compartilhado de preferências `consent-v1.0` com estados granulares e revogação idempotente.
 - [x] Testar o contrato de consentimento, garantindo que localização, personalização e publicidade sejam finalidades independentes.
+
+## Auditoria do motor de regras de cupons
+
+- [x] Comparar percentual versus valor fixo no schema, API, formulário e resgate.
+- [x] Comparar compra mínima no schema, API, formulário e validação do resgate.
+- [x] Comparar limite por CPF, veículo e placa com proteção contra duplicidade e privacidade.
+- [x] Comparar validade, dias e horários com timezone e validação no resgate.
+- [x] Comparar lojas participantes e isolamento hierárquico no cadastro e resgate.
+- [x] Comparar raio geográfico e validação de distância no uso do cupom.
+- [x] Comparar público elegível e regras de inclusão/exclusão.
+- [x] Comparar limite financeiro e quantidade máxima de resgates com concorrência segura.
+- [x] Comparar benefício exclusivo para cliente novo.
+- [x] Comparar QR Code, código ou validação automática no fluxo de resgate.
+- [x] Comparar regras cumulativas e não cumulativas.
+- [x] Criar matriz executiva de cobertura atual, parcial e ausente.
+- [ ] Implementar e testar as regras obrigatórias ausentes ou incompletas.
+- [ ] Validar o motor de regras no desktop/mobile e publicar checkpoint da evolução.
