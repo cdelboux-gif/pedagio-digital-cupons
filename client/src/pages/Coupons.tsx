@@ -39,7 +39,10 @@ export default function Coupons() {
   useEffect(() => {
     const rules = persistedRules.data?.rules;
     if (!editingId || !rules) return;
-    setForm(current => ({ ...current, discountType: rules.discountType, discountValue: String(rules.discountValue), minimumPurchaseAmount: String(rules.minimumPurchaseAmount), maxRedemptionsPerCustomer: String(rules.maxRedemptionsPerCustomer), maxRedemptionsPerVehicle: String(rules.maxRedemptionsPerVehicle), maxRedemptionsPerPlate: String(rules.maxRedemptionsPerPlate) }));
+    let weekdays: number[] = []; let audienceSegments = "";
+    try { weekdays = rules.allowedWeekdaysJson ? JSON.parse(rules.allowedWeekdaysJson) as number[] : []; } catch { weekdays = []; }
+    try { const audience = rules.audienceJson ? JSON.parse(rules.audienceJson) as { requiredSegments?: string[] } : null; audienceSegments = audience?.requiredSegments?.join(", ") ?? ""; } catch { audienceSegments = ""; }
+    setForm(current => ({ ...current, discountType: rules.discountType, discountValue: String(rules.discountValue), minimumPurchaseAmount: String(rules.minimumPurchaseAmount), maxRedemptionsPerCustomer: String(rules.maxRedemptionsPerCustomer), maxRedemptionsPerVehicle: String(rules.maxRedemptionsPerVehicle), maxRedemptionsPerPlate: String(rules.maxRedemptionsPerPlate), allowedWeekdays: weekdays.join(", "), allowedStartTime: rules.allowedStartTime ?? "", allowedEndTime: rules.allowedEndTime ?? "", radiusMeters: String(rules.radiusMeters), latitude: rules.latitude == null ? "" : String(rules.latitude), longitude: rules.longitude == null ? "" : String(rules.longitude), audienceSegments, newCustomerOnly: Boolean(rules.newCustomerOnly), validationMode: rules.validationMode, stackingPolicy: rules.stackingPolicy }));
   }, [editingId, persistedRules.data]);
   const createCoupon = trpc.admin.coupons.create.useMutation({ onSuccess: async () => { await Promise.all([utils.admin.coupons.list.invalidate(), utils.admin.dashboard.invalidate()]); toast.success("Cupom criado com sucesso"); closeDialog(); }, onError: error => toast.error(error.message) });
   const updateCoupon = trpc.admin.coupons.update.useMutation({ onSuccess: async () => { await Promise.all([utils.admin.coupons.list.invalidate(), utils.admin.dashboard.invalidate()]); toast.success("Cupom atualizado"); closeDialog(); }, onError: error => toast.error(error.message) });
@@ -55,7 +58,7 @@ export default function Coupons() {
     if (data.usageLimit < 0 || !Number.isInteger(data.usageLimit)) return toast.error("Informe um limite de usos válido");
     if (data.rules.discountValue <= 0 || data.rules.minimumPurchaseAmount < 0) return toast.error("Informe valores comerciais válidos");
     if (data.rules.discountType === "percentage" && data.rules.discountValue > 100) return toast.error("O percentual deve estar entre 0 e 100");
-    if (editingId) updateCoupon.mutate({ id: editingId, data: { ...data, rules: undefined } }); else createCoupon.mutate(data);
+    if (editingId) updateCoupon.mutate({ id: editingId, data }); else createCoupon.mutate(data);
   }
   const isSaving = createCoupon.isPending || updateCoupon.isPending;
   return <div className="mx-auto max-w-[1500px] space-y-6">
