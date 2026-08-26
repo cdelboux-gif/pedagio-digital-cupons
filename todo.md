@@ -309,3 +309,9 @@
 - [x] Adicionar tooltip acessível para variáveis seguras.
 - [x] Adicionar tooltip acessível para deep links.
 - [x] Validar responsividade, testes e publicar a melhoria.
+
+## Ajuste: autocompletar de variáveis seguras
+
+- [x] Definir catálogo de variáveis disponíveis e interação de seleção.
+- [x] Implementar menu suspenso/autocomplete com inserção no texto do template.
+- [x] Validar teclado, responsividade, testes e publicar a melhoria.
