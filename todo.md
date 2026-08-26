@@ -286,7 +286,7 @@
 - [x] Cobrir o avaliador com testes unitários para as regras comerciais e geográficas.
 - [x] Conectar criação e atualização de cupons à persistência transacional das regras e lojas participantes.
 - [x] Adicionar à tela de cupons os campos P0 de tipo/valor, compra mínima e limites individuais.
-- [ ] Conectar o avaliador ao resgate transacional com contagens por CPF, veículo e placa, lock/concurrency e atualização de orçamento.
+- [x] Conectar o avaliador ao resgate transacional com contagens por CPF, veículo e placa, lock/concurrency e atualização de orçamento.
 - [ ] Carregar e editar na interface os campos avançados de calendário, geofence, público, cliente novo, QR/automático e cumulatividade.
 - [ ] Validar a experiência autenticada em desktop/mobile e publicar o checkpoint final do endurecimento.
 

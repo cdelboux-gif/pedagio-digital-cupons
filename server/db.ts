@@ -908,6 +908,7 @@ export async function registerCouponUse(input: {
   const db = await requireDb();
 
   return db.transaction(async tx => {
+    await tx.execute(sql`SELECT id FROM coupons WHERE id = ${input.couponId} FOR UPDATE`);
     const couponRows = await tx.select().from(coupons).where(eq(coupons.id, input.couponId)).limit(1);
     const activeCoupon = couponRows[0];
     if (!activeCoupon) throw new CouponUseRuleError("Cupom não encontrado");
