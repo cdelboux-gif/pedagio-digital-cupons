@@ -72,6 +72,8 @@ import {
   getRecommendationDeliveryById,
   recordRecommendationInteraction,
   listRecommendationMetrics,
+  getCouponRulesByCouponId,
+  listCouponParticipatingStoreIds,
 } from "../db";
 import { accessLevelValues, entityStatusValues, integrationEventValues, integrationStatusValues, storeStatusValues } from "../../drizzle/schema";
 import { moduleProcedure, router, superAdminProcedure } from "../_core/trpc";
@@ -319,6 +321,11 @@ export const adminRouter = router({
   }),
 
   coupons: router({
+    rules: moduleProcedure("coupons", "read").input(z.object({ id: z.number().int().positive() })).query(async ({ input, ctx }) => {
+      if (!(await isCouponInScope(input.id, scopeOf(ctx.user), false))) throw forbiddenScope();
+      const [rules, participatingStoreIds] = await Promise.all([getCouponRulesByCouponId(input.id), listCouponParticipatingStoreIds(input.id)]);
+      return { rules, participatingStoreIds };
+    }),
     list: moduleProcedure("coupons", "read")
       .input(
         z

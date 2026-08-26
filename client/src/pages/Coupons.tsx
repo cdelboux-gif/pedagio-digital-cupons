@@ -13,7 +13,7 @@ import { requiresCouponStatusConfirmation } from "@/lib/coupon-status";
 import { trpc } from "@/lib/trpc";
 import { usePermissions } from "@/_core/hooks/useAuth";
 import { CalendarRange, CircleAlert, Edit3, MoreHorizontal, Pause, Play, Plus, Search, TicketPercent, XCircle } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 type CouponStatus = "draft" | "active" | "paused" | "ended";
@@ -35,6 +35,12 @@ export default function Coupons() {
   const coupons = trpc.admin.coupons.list.useQuery(filters, { retry: false });
   const storesInput = useMemo(() => form.partnerId ? { partnerId: Number(form.partnerId) } : undefined, [form.partnerId]);
   const stores = trpc.admin.stores.list.useQuery(storesInput, { retry: false });
+  const persistedRules = trpc.admin.coupons.rules.useQuery({ id: editingId ?? 0 }, { enabled: Boolean(editingId), retry: false });
+  useEffect(() => {
+    const rules = persistedRules.data?.rules;
+    if (!editingId || !rules) return;
+    setForm(current => ({ ...current, discountType: rules.discountType, discountValue: String(rules.discountValue), minimumPurchaseAmount: String(rules.minimumPurchaseAmount), maxRedemptionsPerCustomer: String(rules.maxRedemptionsPerCustomer), maxRedemptionsPerVehicle: String(rules.maxRedemptionsPerVehicle), maxRedemptionsPerPlate: String(rules.maxRedemptionsPerPlate) }));
+  }, [editingId, persistedRules.data]);
   const createCoupon = trpc.admin.coupons.create.useMutation({ onSuccess: async () => { await Promise.all([utils.admin.coupons.list.invalidate(), utils.admin.dashboard.invalidate()]); toast.success("Cupom criado com sucesso"); closeDialog(); }, onError: error => toast.error(error.message) });
   const updateCoupon = trpc.admin.coupons.update.useMutation({ onSuccess: async () => { await Promise.all([utils.admin.coupons.list.invalidate(), utils.admin.dashboard.invalidate()]); toast.success("Cupom atualizado"); closeDialog(); }, onError: error => toast.error(error.message) });
   const updateStatus = trpc.admin.coupons.updateStatus.useMutation({ onSuccess: async () => { await Promise.all([utils.admin.coupons.list.invalidate(), utils.admin.dashboard.invalidate()]); toast.success("Status do cupom atualizado"); setStatusConfirmation(null); }, onError: error => toast.error(error.message) });
