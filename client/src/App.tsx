@@ -17,9 +17,10 @@ import Invite from "./pages/Invite";
 import Audit from "./pages/Audit";
 import Emails from "./pages/Emails";
 import Intelligence from "./pages/Intelligence";
+import Notifications from "./pages/Notifications";
 
 function ProtectedRouter() {
-  return <DashboardLayout><Switch><Route path="/" component={Dashboard} /><Route path="/parceiros" component={Partners} /><Route path="/cupons" component={Coupons} /><Route path="/utilizacoes" component={Uses} /><Route path="/integracoes" component={Integrations} /><Route path="/entidades" component={Entities} /><Route path="/lojas" component={Stores} /><Route path="/acessos" component={Access} /><Route path="/auditoria" component={Audit} /><Route path="/emails" component={Emails} /><Route path="/inteligencia" component={Intelligence} /><Route component={NotFound} /></Switch></DashboardLayout>;
+  return <DashboardLayout><Switch><Route path="/" component={Dashboard} /><Route path="/parceiros" component={Partners} /><Route path="/cupons" component={Coupons} /><Route path="/utilizacoes" component={Uses} /><Route path="/integracoes" component={Integrations} /><Route path="/entidades" component={Entities} /><Route path="/lojas" component={Stores} /><Route path="/acessos" component={Access} /><Route path="/auditoria" component={Audit} /><Route path="/emails" component={Emails} /><Route path="/notificacoes" component={Notifications} /><Route path="/inteligencia" component={Intelligence} /><Route component={NotFound} /></Switch></DashboardLayout>;
 }
 
 function Router() {

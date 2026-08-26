@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Activity, Boxes, BrainCircuit, FileClock, Handshake, LayoutDashboard, LogOut, Mail, PanelLeft, ShieldCheck, Store, TicketPercent, UserCog, Webhook } from "lucide-react";
+import { Activity, BellRing, Boxes, BrainCircuit, FileClock, Handshake, LayoutDashboard, LogOut, Mail, PanelLeft, ShieldCheck, Store, TicketPercent, UserCog, Webhook } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -40,6 +40,7 @@ const menuItems: Array<{ icon: typeof LayoutDashboard; label: string; path: stri
   { icon: UserCog, label: "Acessos", path: "/acessos", module: "access" },
   { icon: FileClock, label: "Auditoria", path: "/auditoria", module: "audit" },
   { icon: Mail, label: "E-mails", path: "/emails", module: "emails" },
+  { icon: BellRing, label: "Notificações", path: "/notificacoes", module: "notifications" },
   { icon: BrainCircuit, label: "Inteligência", path: "/inteligencia", module: "intelligence" },
 ];
 

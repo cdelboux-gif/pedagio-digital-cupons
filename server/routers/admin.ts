@@ -72,6 +72,17 @@ import {
   getRecommendationDeliveryById,
   recordRecommendationInteraction,
   listRecommendationMetrics,
+  listNotificationTemplates,
+  getNotificationTemplateById,
+  createNotificationTemplate,
+  updateNotificationTemplate,
+  listNotificationRules,
+  createNotificationRule,
+  updateNotificationRule,
+  listNotificationOutbox,
+  enqueueNotification,
+  simulateNotificationOutbox,
+  retryNotificationOutbox,
   getCouponRulesByCouponId,
   listCouponParticipatingStoreIds,
 } from "../db";
@@ -91,12 +102,15 @@ const storeStatus = z.enum(storeStatusValues);
 const loginInviteStatus = z.enum(["pending", "accepted", "revoked", "expired"]);
 const nullableId = z.number().int().positive().nullable().optional();
 const emailEvent = z.enum(emailEventValues);
-const auditResource = z.enum(["access", "login_invite", "entity", "partner", "store", "coupon", "integration", "email_sender", "email_template", "email_rule", "email_outbox"]);
+const auditResource = z.enum(["access", "login_invite", "entity", "partner", "store", "coupon", "integration", "email_sender", "email_template", "email_rule", "email_outbox", "notification_template", "notification_rule", "notification_outbox"]);
 const auditAction = z.enum(["create", "update", "status_change", "delete", "revoke", "activate", "resend", "simulate"]);
 const emailCondition = z.object({ field: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_.-]*$/).max(80), operator: z.enum(["equals", "not_equals", "contains", "gt", "gte", "lt", "lte"]), value: z.union([z.string().max(240), z.number(), z.boolean()]) });
 const emailSenderInput = z.object({ name: z.string().trim().min(2).max(120), fromName: z.string().trim().min(2).max(160), fromEmail: z.string().trim().email().max(320), replyTo: z.string().trim().email().max(320).nullable().optional(), status: z.enum(["active", "inactive"]) });
 const emailTemplateInput = z.object({ templateKey: z.string().trim().regex(/^[a-z0-9_.-]+$/).max(100), name: z.string().trim().min(2).max(160), status: z.enum(["draft", "published", "archived"]), version: z.number().int().positive().max(9999), senderId: nullableId, subject: z.string().trim().min(1).max(240), preheader: z.string().trim().max(240).nullable().optional(), bodyHtml: z.string().max(100_000), bodyText: z.string().max(100_000).nullable().optional(), allowedVariables: z.array(z.string().regex(/^[a-zA-Z][a-zA-Z0-9_.-]*$/).max(80)).max(100) });
 const emailRuleInput = z.object({ templateId: z.number().int().positive(), name: z.string().trim().min(2).max(160), eventName: emailEvent, conditions: z.array(emailCondition).max(20), enabled: z.boolean(), cooldownSeconds: z.number().int().min(0).max(2_592_000) });
+const notificationDeliveryMode = z.enum(["simulated", "app_contract", "platform"]);
+const notificationTemplateInput = z.object({ templateKey: z.string().trim().regex(/^[a-z0-9_.-]+$/).max(100), name: z.string().trim().min(2).max(160), status: z.enum(["draft", "published", "archived"]), version: z.number().int().positive().max(9999), title: z.string().trim().min(1).max(120), body: z.string().trim().min(1).max(500), expandedBody: z.string().max(4000).nullable().optional(), imageUrl: z.string().url().max(700).nullable().optional(), ctaLabel: z.string().trim().max(60).nullable().optional(), deepLink: z.string().trim().regex(/^[a-z][a-z0-9+.-]*:/i).max(500).nullable().optional(), allowedVariables: z.array(z.string().regex(/^[a-zA-Z][a-zA-Z0-9_.-]*$/).max(80)).max(100), deliveryMode: notificationDeliveryMode, locale: z.string().trim().max(12), priority: z.number().int().min(-10).max(10) });
+const notificationRuleInput = z.object({ templateId: z.number().int().positive(), name: z.string().trim().min(2).max(160), eventName: z.string().trim().min(1).max(120), conditions: z.array(emailCondition).max(20), enabled: z.boolean(), cooldownSeconds: z.number().int().min(0).max(2_592_000) });
 const imageUpload = z.object({
   fileName: z.string().trim().min(1).max(160),
   dataUrl: z.string().regex(/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/).max(7_500_000),
@@ -697,6 +711,58 @@ export const adminRouter = router({
       });
       if (result.row) await audit(ctx, { action: "simulate", resourceType: "coupon", resourceId: delivery.couponId, resourceLabel: `Interação ${input.eventName}`, after: result.row, scope: scopeOf(ctx.user) });
       return result;
+    }),
+  }),
+
+  notifications: router({
+    templates: router({
+      list: moduleProcedure("notifications", "read").query(() => listNotificationTemplates()),
+      create: moduleProcedure("notifications", "create").input(notificationTemplateInput).mutation(async ({ input, ctx }) => {
+        const template = await createNotificationTemplate({ ...input, expandedBody: input.expandedBody ?? null, imageUrl: input.imageUrl ?? null, ctaLabel: input.ctaLabel ?? null, deepLink: input.deepLink ?? null, createdByUserId: ctx.user.id });
+        await audit(ctx, { action: "create", resourceType: "notification_template", resourceId: template?.id, resourceLabel: template?.templateKey, after: template, scope: scopeOf(ctx.user) });
+        return template;
+      }),
+      update: moduleProcedure("notifications", "update").input(z.object({ id: z.number().int().positive(), data: notificationTemplateInput })).mutation(async ({ input, ctx }) => {
+        const before = await getNotificationTemplateById(input.id);
+        if (!before) throw notFound("Template de notificação");
+        const template = await updateNotificationTemplate(input.id, { ...input.data, expandedBody: input.data.expandedBody ?? null, imageUrl: input.data.imageUrl ?? null, ctaLabel: input.data.ctaLabel ?? null, deepLink: input.data.deepLink ?? null });
+        await audit(ctx, { action: "update", resourceType: "notification_template", resourceId: input.id, resourceLabel: template?.templateKey, before, after: template, scope: scopeOf(ctx.user) });
+        return template;
+      }),
+    }),
+    rules: router({
+      list: moduleProcedure("notifications", "read").query(() => listNotificationRules()),
+      create: moduleProcedure("notifications", "create").input(notificationRuleInput).mutation(async ({ input, ctx }) => {
+        const rule = await createNotificationRule({ ...input, enabled: input.enabled ? 1 : 0, createdByUserId: ctx.user.id });
+        await audit(ctx, { action: "create", resourceType: "notification_rule", resourceId: rule?.id, resourceLabel: rule?.name, after: rule, scope: scopeOf(ctx.user) });
+        return rule;
+      }),
+      update: moduleProcedure("notifications", "update").input(z.object({ id: z.number().int().positive(), data: notificationRuleInput })).mutation(async ({ input, ctx }) => {
+        const rule = await updateNotificationRule(input.id, { ...input.data, enabled: input.data.enabled ? 1 : 0 });
+        if (!rule) throw notFound("Regra de notificação");
+        await audit(ctx, { action: "update", resourceType: "notification_rule", resourceId: input.id, resourceLabel: rule.name, after: rule, scope: scopeOf(ctx.user) });
+        return rule;
+      }),
+    }),
+    outbox: router({
+      list: moduleProcedure("notifications", "read").input(z.object({ status: z.enum(["queued", "simulated", "failed", "delivered", "cancelled"]).optional(), limit: z.number().int().min(1).max(200).optional() }).optional()).query(({ input }) => listNotificationOutbox(input)),
+      enqueue: moduleProcedure("notifications", "create").input(z.object({ templateId: z.number().int().positive(), ruleId: z.number().int().positive().nullable().optional(), eventName: z.string().trim().min(1).max(120), recipientReference: z.string().trim().min(1).max(160), eventKey: z.string().trim().min(1).max(160), variables: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])), data: z.record(z.string(), z.unknown()).optional(), couponId: z.number().int().positive().nullable().optional(), benefitId: z.number().int().positive().nullable().optional(), expiresAt: z.coerce.date().nullable().optional() })).mutation(async ({ input, ctx }) => {
+        const result = await enqueueNotification({ ...input, createdByUserId: ctx.user.id });
+        if (result.row) await audit(ctx, { action: "simulate", resourceType: "notification_outbox", resourceId: result.row.id, resourceLabel: input.recipientReference, after: { ...result.row, duplicate: !result.created }, scope: scopeOf(ctx.user) });
+        return result;
+      }),
+      simulate: moduleProcedure("notifications", "update").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+        const row = await simulateNotificationOutbox(input.id);
+        if (!row) throw notFound("Notificação do outbox");
+        await audit(ctx, { action: "simulate", resourceType: "notification_outbox", resourceId: row.id, resourceLabel: row.recipientReference, after: row, scope: scopeOf(ctx.user) });
+        return row;
+      }),
+      retry: moduleProcedure("notifications", "update").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+        const row = await retryNotificationOutbox(input.id);
+        if (!row) throw notFound("Notificação do outbox");
+        await audit(ctx, { action: "update", resourceType: "notification_outbox", resourceId: row.id, resourceLabel: row.recipientReference, after: row, scope: scopeOf(ctx.user) });
+        return row;
+      }),
     }),
   }),
 

@@ -292,3 +292,14 @@
 
 - [x] Integrar o avaliador ao resgate administrativo, persistindo compra/desconto e referências de veículo/placa, com atualização condicional de uso e orçamento.
 - [x] Expor no contrato tRPC do resgate os dados necessários para regras individualizadas e geográficas.
+
+## Nova expansão: notificações do app
+
+- [x] Mapear o módulo de e-mails, eventos, variáveis, regras e outbox reutilizáveis para notificações.
+- [x] Definir modos de entrega: plataforma envia push/in-app ou app proprietário renderiza via contrato/webhook.
+- [x] Modelar notificações, templates versionados, regras de disparo, preferências e outbox idempotente.
+- [x] Implementar APIs protegidas e contrato de entrega para app proprietário.
+- [x] Criar editor administrativo de notificações com conteúdo rico, preview e variáveis seguras.
+- [x] Criar histórico, simulação, reprocessamento e estados de entrega sem duplicidade.
+- [x] Cobrir autorização, sanitização, idempotência, LGPD, testes e responsividade.
+- [x] Validar a experiência autenticada e publicar a expansão.

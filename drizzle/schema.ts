@@ -33,10 +33,13 @@ export const entityStatusValues = ["active", "inactive"] as const;
 export const storeStatusValues = ["active", "inactive"] as const;
 export const loginInviteStatusValues = ["pending", "accepted", "revoked", "expired"] as const;
 export const auditActionValues = ["create", "update", "status_change", "delete", "revoke", "activate", "resend", "simulate"] as const;
-export const auditResourceValues = ["access", "login_invite", "entity", "partner", "store", "coupon", "integration", "email_sender", "email_template", "email_rule", "email_outbox"] as const;
+export const auditResourceValues = ["access", "login_invite", "entity", "partner", "store", "coupon", "integration", "email_sender", "email_template", "email_rule", "email_outbox", "notification_template", "notification_rule", "notification_outbox"] as const;
 export const emailSenderStatusValues = ["active", "inactive"] as const;
 export const emailTemplateStatusValues = ["draft", "published", "archived"] as const;
 export const emailOutboxStatusValues = ["queued", "simulated", "failed", "cancelled"] as const;
+export const notificationTemplateStatusValues = ["draft", "published", "archived"] as const;
+export const notificationDeliveryModeValues = ["simulated", "app_contract", "platform"] as const;
+export const notificationOutboxStatusValues = ["queued", "simulated", "failed", "delivered", "cancelled"] as const;
 
 /** Core user table backing the Manus OAuth flow. */
 export const users = mysqlTable("users", {
@@ -490,6 +493,85 @@ export const recommendationInteractions = mysqlTable(
   ],
 );
 
+export const notificationTemplates = mysqlTable(
+  "notificationTemplates",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    templateKey: varchar("templateKey", { length: 100 }).notNull(),
+    name: varchar("name", { length: 160 }).notNull(),
+    status: mysqlEnum("status", notificationTemplateStatusValues).default("draft").notNull(),
+    version: int("version").default(1).notNull(),
+    title: varchar("title", { length: 120 }).notNull(),
+    body: varchar("body", { length: 500 }).notNull(),
+    expandedBody: text("expandedBody"),
+    imageUrl: varchar("imageUrl", { length: 700 }),
+    ctaLabel: varchar("ctaLabel", { length: 60 }),
+    deepLink: varchar("deepLink", { length: 500 }),
+    allowedVariablesJson: text("allowedVariablesJson").notNull(),
+    deliveryMode: mysqlEnum("deliveryMode", notificationDeliveryModeValues).default("simulated").notNull(),
+    locale: varchar("locale", { length: 12 }).default("pt-BR").notNull(),
+    priority: int("priority").default(0).notNull(),
+    createdByUserId: int("createdByUserId").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [uniqueIndex("notification_templates_key_version_uq").on(table.templateKey, table.version), index("notification_templates_status_idx").on(table.status)],
+);
+
+export const notificationRules = mysqlTable(
+  "notificationRules",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    templateId: int("templateId").notNull().references(() => notificationTemplates.id, { onDelete: "restrict" }),
+    name: varchar("name", { length: 160 }).notNull(),
+    eventName: varchar("eventName", { length: 120 }).notNull(),
+    conditionsJson: text("conditionsJson").notNull(),
+    enabled: int("enabled").default(1).notNull(),
+    cooldownSeconds: int("cooldownSeconds").default(0).notNull(),
+    createdByUserId: int("createdByUserId").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("notification_rules_event_idx").on(table.eventName), index("notification_rules_template_idx").on(table.templateId)],
+);
+
+export const notificationPreferences = mysqlTable(
+  "notificationPreferences",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userReference: varchar("userReference", { length: 160 }).notNull(),
+    channel: varchar("channel", { length: 40 }).notNull(),
+    enabled: int("enabled").default(1).notNull(),
+    consentVersion: varchar("consentVersion", { length: 40 }),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [uniqueIndex("notification_preferences_user_channel_uq").on(table.userReference, table.channel)],
+);
+
+export const notificationOutbox = mysqlTable(
+  "notificationOutbox",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    idempotencyKey: varchar("idempotencyKey", { length: 180 }).notNull().unique(),
+    templateId: int("templateId").references(() => notificationTemplates.id, { onDelete: "set null" }),
+    ruleId: int("ruleId").references(() => notificationRules.id, { onDelete: "set null" }),
+    eventName: varchar("eventName", { length: 120 }).notNull(),
+    recipientReference: varchar("recipientReference", { length: 160 }).notNull(),
+    payloadJson: text("payloadJson").notNull(),
+    deliveryMode: mysqlEnum("deliveryMode", notificationDeliveryModeValues).notNull(),
+    status: mysqlEnum("status", notificationOutboxStatusValues).default("queued").notNull(),
+    attempts: int("attempts").default(0).notNull(),
+    lastError: text("lastError"),
+    availableAt: datetime("availableAt").notNull(),
+    processedAt: datetime("processedAt"),
+    createdByUserId: int("createdByUserId").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("notification_outbox_status_idx").on(table.status, table.availableAt), index("notification_outbox_event_idx").on(table.eventName), index("notification_outbox_recipient_idx").on(table.recipientReference, table.createdAt)],
+);
+
 export const emailOutbox = mysqlTable(
   "emailOutbox",
   {
@@ -533,6 +615,10 @@ export type EmailSender = typeof emailSenders.$inferSelect;
 export type EmailTemplate = typeof emailTemplates.$inferSelect;
 export type EmailRule = typeof emailRules.$inferSelect;
 export type EmailOutbox = typeof emailOutbox.$inferSelect;
+export type NotificationTemplate = typeof notificationTemplates.$inferSelect;
+export type NotificationRule = typeof notificationRules.$inferSelect;
+export type NotificationPreference = typeof notificationPreferences.$inferSelect;
+export type NotificationOutbox = typeof notificationOutbox.$inferSelect;
 export type TollPlaza = typeof tollPlazas.$inferSelect;
 export type RecommendationCampaign = typeof recommendationCampaigns.$inferSelect;
 export type TollPassageEvent = typeof tollPassageEvents.$inferSelect;

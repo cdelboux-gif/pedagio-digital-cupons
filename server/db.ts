@@ -31,6 +31,10 @@ import {
   emailTemplates,
   emailRules,
   emailOutbox,
+  notificationTemplates,
+  notificationRules,
+  notificationPreferences,
+  notificationOutbox,
   tollPlazas,
   recommendationCampaigns,
   tollPassageEvents,
@@ -50,12 +54,16 @@ import {
   type EmailTemplate,
   type EmailRule,
   type EmailOutbox,
+  type NotificationTemplate,
+  type NotificationRule,
+  type NotificationOutbox,
   users,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { storagePut } from "./storage";
 import type { AccessLevel } from "../shared/permissions";
 import { buildEmailIdempotencyKey, matchEmailConditions, normalizeEmailAddress, renderEmail, renderEmailText, sanitizeEmailHtml, type EmailCondition, type EmailEventName, type EmailVariables } from "./email";
+import { buildNotificationIdempotencyKey, notificationV1Schema, type NotificationV1 } from "../shared/notification-contract";
 import { evaluateCouponRules, type CouponRuleDefinition } from "./coupon-rules";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -1012,7 +1020,7 @@ export type AuditLogInput = {
   actorUserId?: number | null;
   actorEmail?: string | null;
   action: "create" | "update" | "status_change" | "delete" | "revoke" | "activate" | "resend" | "simulate";
-  resourceType: "access" | "login_invite" | "entity" | "partner" | "store" | "coupon" | "integration" | "email_sender" | "email_template" | "email_rule" | "email_outbox";
+  resourceType: "access" | "login_invite" | "entity" | "partner" | "store" | "coupon" | "integration" | "email_sender" | "email_template" | "email_rule" | "email_outbox" | "notification_template" | "notification_rule" | "notification_outbox";
   resourceId?: number | null;
   resourceLabel?: string | null;
   before?: unknown;
@@ -1306,3 +1314,40 @@ export async function retryEmailOutbox(id: number) {
   const rows = await db.select().from(emailOutbox).where(eq(emailOutbox.id, id)).limit(1);
   return rows[0];
 }
+
+export type NotificationTemplateInput = Pick<NotificationTemplate, "templateKey" | "name" | "status" | "version" | "title" | "body" | "expandedBody" | "imageUrl" | "ctaLabel" | "deepLink" | "deliveryMode" | "locale" | "priority"> & { allowedVariables: string[]; createdByUserId: number };
+export async function listNotificationTemplates() { const db = await requireDb(); return db.select().from(notificationTemplates).orderBy(desc(notificationTemplates.updatedAt)); }
+export async function getNotificationTemplateById(id: number) { const db = await requireDb(); const rows = await db.select().from(notificationTemplates).where(eq(notificationTemplates.id, id)).limit(1); return rows[0]; }
+export async function createNotificationTemplate(input: NotificationTemplateInput) { const db = await requireDb(); const result = await db.insert(notificationTemplates).values({ ...input, allowedVariablesJson: JSON.stringify(input.allowedVariables) }); return getNotificationTemplateById(Number(result[0].insertId)); }
+export async function updateNotificationTemplate(id: number, input: Omit<NotificationTemplateInput, "createdByUserId">) { const db = await requireDb(); await db.update(notificationTemplates).set({ ...input, allowedVariablesJson: JSON.stringify(input.allowedVariables) }).where(eq(notificationTemplates.id, id)); return getNotificationTemplateById(id); }
+
+export type NotificationRuleInput = Pick<NotificationRule, "templateId" | "name" | "eventName" | "enabled" | "cooldownSeconds"> & { conditions: EmailCondition[]; createdByUserId: number };
+export async function listNotificationRules() { const db = await requireDb(); return db.select().from(notificationRules).orderBy(desc(notificationRules.updatedAt)); }
+export async function createNotificationRule(input: NotificationRuleInput) { const db = await requireDb(); const result = await db.insert(notificationRules).values({ ...input, conditionsJson: JSON.stringify(input.conditions) }); const rows = await db.select().from(notificationRules).where(eq(notificationRules.id, Number(result[0].insertId))).limit(1); return rows[0]; }
+export async function updateNotificationRule(id: number, input: Omit<NotificationRuleInput, "createdByUserId">) { const db = await requireDb(); await db.update(notificationRules).set({ ...input, conditionsJson: JSON.stringify(input.conditions) }).where(eq(notificationRules.id, id)); const rows = await db.select().from(notificationRules).where(eq(notificationRules.id, id)).limit(1); return rows[0]; }
+
+export type NotificationOutboxInput = { templateId: number; ruleId?: number | null; eventName: string; recipientReference: string; eventKey: string; variables: Record<string, unknown>; data?: Record<string, unknown>; couponId?: number | null; benefitId?: number | null; expiresAt?: Date | null; createdByUserId?: number | null };
+export async function enqueueNotification(input: NotificationOutboxInput) {
+  const db = await requireDb();
+  const template = await getNotificationTemplateById(input.templateId);
+  if (!template) throw new Error("Template de notificação não encontrado");
+  const allowed = JSON.parse(template.allowedVariablesJson) as string[];
+  const variables = Object.fromEntries(Object.entries(input.variables).filter(([key]) => allowed.includes(key)));
+  const replace = (value: string) => value.replace(/{{\s*([\w.-]+)\s*}}/g, (_, key: string) => String(variables[key] ?? ""));
+  const payload: NotificationV1 = notificationV1Schema.parse({ version: "notification.v1", notificationId: 1, eventName: input.eventName, recipientReference: input.recipientReference, title: replace(template.title), body: replace(template.body), expandedBody: template.expandedBody ? replace(template.expandedBody) : null, imageUrl: template.imageUrl, ctaLabel: template.ctaLabel ? replace(template.ctaLabel) : null, deepLink: template.deepLink ? replace(template.deepLink) : null, couponId: input.couponId ?? null, benefitId: input.benefitId ?? null, expiresAt: input.expiresAt?.toISOString() ?? null, priority: template.priority, locale: template.locale, data: input.data ?? {} });
+  const idempotencyKey = buildNotificationIdempotencyKey(input.eventName, input.recipientReference, input.templateId, input.eventKey);
+  payload.notificationId = 0;
+  try {
+    const result = await db.insert(notificationOutbox).values({ idempotencyKey, templateId: input.templateId, ruleId: input.ruleId ?? null, eventName: input.eventName, recipientReference: input.recipientReference, payloadJson: JSON.stringify(payload), deliveryMode: template.deliveryMode, status: "queued", availableAt: new Date(), createdByUserId: input.createdByUserId ?? null });
+    const rows = await db.select().from(notificationOutbox).where(eq(notificationOutbox.id, Number(result[0].insertId))).limit(1);
+    const row = rows[0];
+    if (row) { const hydrated = { ...payload, notificationId: row.id }; await db.update(notificationOutbox).set({ payloadJson: JSON.stringify(hydrated) }).where(eq(notificationOutbox.id, row.id)); return { created: true, row: { ...row, payloadJson: JSON.stringify(hydrated) } }; }
+  } catch (error) { if ((error as { code?: string }).code !== "ER_DUP_ENTRY") throw error; }
+  const rows = await db.select().from(notificationOutbox).where(eq(notificationOutbox.idempotencyKey, idempotencyKey)).limit(1);
+  return { created: false, row: rows[0] };
+}
+export async function listNotificationOutbox(filters?: { status?: NotificationOutbox["status"]; limit?: number }) { const db = await requireDb(); return db.select().from(notificationOutbox).where(filters?.status ? eq(notificationOutbox.status, filters.status) : undefined).orderBy(desc(notificationOutbox.createdAt)).limit(Math.min(filters?.limit ?? 100, 200)); }
+export async function simulateNotificationOutbox(id: number) { const db = await requireDb(); const now = new Date(); await db.update(notificationOutbox).set({ status: "simulated", attempts: sql`${notificationOutbox.attempts} + 1`, processedAt: now, updatedAt: now }).where(and(eq(notificationOutbox.id, id), or(eq(notificationOutbox.status, "queued"), eq(notificationOutbox.status, "failed")))); const rows = await db.select().from(notificationOutbox).where(eq(notificationOutbox.id, id)).limit(1); return rows[0]; }
+export async function retryNotificationOutbox(id: number) { const db = await requireDb(); await db.update(notificationOutbox).set({ status: "queued", lastError: null, availableAt: new Date() }).where(eq(notificationOutbox.id, id)); const rows = await db.select().from(notificationOutbox).where(eq(notificationOutbox.id, id)).limit(1); return rows[0]; }
+export async function listNotificationPreferences(userReference: string) { const db = await requireDb(); return db.select().from(notificationPreferences).where(eq(notificationPreferences.userReference, userReference)); }
+export async function upsertNotificationPreference(input: { userReference: string; channel: string; enabled: boolean; consentVersion?: string | null }) { const db = await requireDb(); await db.insert(notificationPreferences).values({ userReference: input.userReference, channel: input.channel, enabled: input.enabled ? 1 : 0, consentVersion: input.consentVersion ?? null }).onDuplicateKeyUpdate({ set: { enabled: input.enabled ? 1 : 0, consentVersion: input.consentVersion ?? null } }); return listNotificationPreferences(input.userReference); }
