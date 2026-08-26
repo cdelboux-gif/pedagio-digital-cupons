@@ -303,3 +303,9 @@
 - [x] Criar histórico, simulação, reprocessamento e estados de entrega sem duplicidade.
 - [x] Cobrir autorização, sanitização, idempotência, LGPD, testes e responsividade.
 - [x] Validar a experiência autenticada e publicar a expansão.
+
+## Ajuste: tooltips do editor de notificações
+
+- [x] Adicionar tooltip acessível para variáveis seguras.
+- [x] Adicionar tooltip acessível para deep links.
+- [x] Validar responsividade, testes e publicar a melhoria.
