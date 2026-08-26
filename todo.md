@@ -290,3 +290,5 @@
 - [ ] Carregar e editar na interface os campos avançados de calendário, geofence, público, cliente novo, QR/automático e cumulatividade.
 - [ ] Validar a experiência autenticada em desktop/mobile e publicar o checkpoint final do endurecimento.
 
+- [x] Integrar o avaliador ao resgate administrativo, persistindo compra/desconto e referências de veículo/placa, com atualização condicional de uso e orçamento.
+- [x] Expor no contrato tRPC do resgate os dados necessários para regras individualizadas e geográficas.

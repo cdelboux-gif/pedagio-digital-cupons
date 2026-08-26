@@ -271,6 +271,10 @@ export const couponUses = mysqlTable(
     storeId: int("storeId").references(() => partnerStores.id, { onDelete: "set null" }),
     reference: varchar("reference", { length: 80 }).notNull().unique(),
     customerReference: varchar("customerReference", { length: 120 }),
+    vehicleReference: varchar("vehicleReference", { length: 120 }),
+    plateReference: varchar("plateReference", { length: 120 }),
+    purchaseAmount: decimal("purchaseAmount", { precision: 12, scale: 2, mode: "number" }),
+    discountAmount: decimal("discountAmount", { precision: 12, scale: 2, mode: "number" }),
     notes: text("notes"),
     usedAt: datetime("usedAt").notNull(),
     registeredByUserId: int("registeredByUserId").references(() => users.id, {

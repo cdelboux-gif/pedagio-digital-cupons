@@ -56,6 +56,7 @@ import { ENV } from "./_core/env";
 import { storagePut } from "./storage";
 import type { AccessLevel } from "../shared/permissions";
 import { buildEmailIdempotencyKey, matchEmailConditions, normalizeEmailAddress, renderEmail, renderEmailText, sanitizeEmailHtml, type EmailCondition, type EmailEventName, type EmailVariables } from "./email";
+import { evaluateCouponRules, type CouponRuleDefinition } from "./coupon-rules";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -894,6 +895,12 @@ export async function registerCouponUse(input: {
   storeId?: number | null;
   reference: string;
   customerReference?: string | null;
+  vehicleReference?: string | null;
+  plateReference?: string | null;
+  purchaseAmount?: number | null;
+  presentedCredential?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   notes?: string | null;
   usedAt: Date;
   registeredByUserId: number;
@@ -901,37 +908,75 @@ export async function registerCouponUse(input: {
   const db = await requireDb();
 
   return db.transaction(async tx => {
-    const result = await tx
-      .update(coupons)
-      .set({ usageCount: sql`${coupons.usageCount} + 1` })
-      .where(
-        and(
-          eq(coupons.id, input.couponId),
-          eq(coupons.status, "active"),
-          lte(coupons.startsAt, input.usedAt),
-          gte(coupons.endsAt, input.usedAt),
-          or(eq(coupons.usageLimit, 0), lt(coupons.usageCount, coupons.usageLimit)),
-        ),
-      );
+    const couponRows = await tx.select().from(coupons).where(eq(coupons.id, input.couponId)).limit(1);
+    const activeCoupon = couponRows[0];
+    if (!activeCoupon) throw new CouponUseRuleError("Cupom não encontrado");
+    if (activeCoupon.status !== "active" || activeCoupon.startsAt > input.usedAt || activeCoupon.endsAt < input.usedAt || (activeCoupon.usageLimit > 0 && activeCoupon.usageCount >= activeCoupon.usageLimit)) throw new CouponUseRuleError("Cupom indisponível para utilização neste momento");
 
-    if (affectedRows(result) !== 1) {
-      throw new CouponUseRuleError("Cupom indisponível para utilização neste momento");
+    const storedRule = await tx.select().from(couponRules).where(eq(couponRules.couponId, input.couponId)).limit(1);
+    const storedStores = await tx.select({ storeId: couponParticipatingStores.storeId }).from(couponParticipatingStores).where(eq(couponParticipatingStores.couponId, input.couponId));
+    let discountAmount: number | null = null;
+    if (storedRule[0]) {
+      const row = storedRule[0];
+      const parseJson = <T>(value: string | null, fallback: T): T => { try { return value ? JSON.parse(value) as T : fallback; } catch { return fallback; } };
+      const countFor = async (column: typeof couponUses.customerReference | typeof couponUses.vehicleReference | typeof couponUses.plateReference, reference: string | null | undefined) => {
+        if (!reference) return 0;
+        const result = await tx.select({ total: count() }).from(couponUses).where(and(eq(couponUses.couponId, input.couponId), eq(column, reference)));
+        return Number(result[0]?.total ?? 0);
+      };
+      const customerRedemptions = await countFor(couponUses.customerReference, input.customerReference);
+      const vehicleRedemptions = await countFor(couponUses.vehicleReference, input.vehicleReference);
+      const plateRedemptions = await countFor(couponUses.plateReference, input.plateReference);
+      const rule: CouponRuleDefinition = {
+        discountType: row.discountType,
+        discountValue: Number(row.discountValue),
+        minimumPurchaseAmount: Number(row.minimumPurchaseAmount),
+        maxRedemptionsPerCustomer: row.maxRedemptionsPerCustomer,
+        maxRedemptionsPerVehicle: row.maxRedemptionsPerVehicle,
+        maxRedemptionsPerPlate: row.maxRedemptionsPerPlate,
+        allowedWeekdays: parseJson<number[]>(row.allowedWeekdaysJson, []),
+        allowedStartTime: row.allowedStartTime,
+        allowedEndTime: row.allowedEndTime,
+        timezone: row.timezone,
+        audience: parseJson(row.audienceJson, null),
+        radiusMeters: row.radiusMeters,
+        latitude: row.latitude == null ? null : Number(row.latitude),
+        longitude: row.longitude == null ? null : Number(row.longitude),
+        financialLimit: row.financialLimit == null ? null : Number(row.financialLimit),
+        financialUsed: Number(row.financialUsed),
+        maxRedemptions: row.maxRedemptions,
+        newCustomerOnly: Boolean(row.newCustomerOnly),
+        validationMode: row.validationMode,
+        stackingPolicy: row.stackingPolicy,
+      };
+      const decision = evaluateCouponRules(rule, {
+        now: input.usedAt,
+        purchaseAmount: input.purchaseAmount ?? 0,
+        customerReference: input.customerReference,
+        vehicleReference: input.vehicleReference,
+        plateReference: input.plateReference,
+        customerRedemptions,
+        vehicleRedemptions,
+        plateRedemptions,
+        totalRedemptions: activeCoupon.usageCount,
+        isNewCustomer: customerRedemptions === 0,
+        storeId: input.storeId ?? activeCoupon.storeId,
+        participatingStoreIds: storedStores.map(store => store.storeId),
+        latitude: input.latitude,
+        longitude: input.longitude,
+        presentedCredential: input.presentedCredential,
+      });
+      if (!decision.eligible) throw new CouponUseRuleError(`Cupom inelegível: ${decision.reasons.join(", ")}`);
+      discountAmount = decision.discountAmount;
+      if (row.financialLimit !== null) {
+        const budgetUpdate = await tx.update(couponRules).set({ financialUsed: sql`${couponRules.financialUsed} + ${discountAmount}` }).where(and(eq(couponRules.id, row.id), lte(sql`${couponRules.financialUsed} + ${discountAmount}`, row.financialLimit)));
+        if (affectedRows(budgetUpdate) !== 1) throw new CouponUseRuleError("Limite financeiro da campanha atingido");
+      }
     }
 
-    const coupon = await tx.select().from(coupons).where(eq(coupons.id, input.couponId)).limit(1);
-    const activeCoupon = coupon[0];
-    if (!activeCoupon) throw new CouponUseRuleError("Cupom não encontrado");
-
-    const inserted = await tx.insert(couponUses).values({
-      couponId: activeCoupon.id,
-      partnerId: activeCoupon.partnerId,
-      storeId: input.storeId ?? activeCoupon.storeId ?? null,
-      reference: input.reference,
-      customerReference: input.customerReference,
-      notes: input.notes,
-      usedAt: input.usedAt,
-      registeredByUserId: input.registeredByUserId,
-    });
+    const result = await tx.update(coupons).set({ usageCount: sql`${coupons.usageCount} + 1` }).where(and(eq(coupons.id, input.couponId), eq(coupons.status, "active"), or(eq(coupons.usageLimit, 0), lt(coupons.usageCount, coupons.usageLimit))));
+    if (affectedRows(result) !== 1) throw new CouponUseRuleError("Limite de utilizações atingido durante o resgate");
+    const inserted = await tx.insert(couponUses).values({ couponId: activeCoupon.id, partnerId: activeCoupon.partnerId, storeId: input.storeId ?? activeCoupon.storeId ?? null, reference: input.reference, customerReference: input.customerReference, vehicleReference: input.vehicleReference, plateReference: input.plateReference, purchaseAmount: input.purchaseAmount, discountAmount, notes: input.notes, usedAt: input.usedAt, registeredByUserId: input.registeredByUserId });
     return Number(inserted[0].insertId);
   });
 }
