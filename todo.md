@@ -258,3 +258,5 @@
 - [x] Definir sincronização da revogação com cache local, fila offline e recomendações personalizadas.
 - [x] Criar contrato técnico de preferências para o app e o backoffice.
 - [ ] Revisar o modelo com o encarregado de dados ou advogado antes de uso em produção.
+- [x] Implementar contrato compartilhado de preferências `consent-v1.0` com estados granulares e revogação idempotente.
+- [x] Testar o contrato de consentimento, garantindo que localização, personalização e publicidade sejam finalidades independentes.
