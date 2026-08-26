@@ -19,6 +19,8 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   couponUses,
   coupons,
+  couponRules,
+  couponParticipatingStores,
   entities,
   integrationEventValues,
   partnerIntegrations,
@@ -203,6 +205,29 @@ type PartnerInput = {
   entityId?: number | null;
 };
 
+export type CouponRuleInput = {
+  discountType: "percentage" | "fixed";
+  discountValue: number;
+  minimumPurchaseAmount: number;
+  maxRedemptionsPerCustomer: number;
+  maxRedemptionsPerVehicle: number;
+  maxRedemptionsPerPlate: number;
+  allowedWeekdays: number[];
+  allowedStartTime?: string | null;
+  allowedEndTime?: string | null;
+  timezone: string;
+  audience?: { requiredSegments?: string[]; excludedSegments?: string[] } | null;
+  radiusMeters: number;
+  latitude?: number | null;
+  longitude?: number | null;
+  financialLimit?: number | null;
+  financialUsed?: number;
+  maxRedemptions: number;
+  newCustomerOnly: boolean;
+  validationMode: "code" | "qr" | "automatic";
+  stackingPolicy: "stackable" | "non_stackable";
+};
+
 type CouponInput = {
   partnerId: number;
   storeId?: number | null;
@@ -214,6 +239,8 @@ type CouponInput = {
   startsAt: Date;
   endsAt: Date;
   usageLimit: number;
+  rules?: CouponRuleInput;
+  participatingStoreIds?: number[];
 };
 
 export async function listPartners(filters: {
@@ -719,16 +746,73 @@ export function publicCoupon<T extends { itemImageKey?: unknown }>(coupon: T) {
   return safeCoupon;
 }
 
+async function persistCouponRule(tx: any, couponId: number, rules: CouponRuleInput) {
+  await tx.insert(couponRules).values({
+    couponId,
+    discountType: rules.discountType,
+    discountValue: rules.discountValue,
+    minimumPurchaseAmount: rules.minimumPurchaseAmount,
+    maxRedemptionsPerCustomer: rules.maxRedemptionsPerCustomer,
+    maxRedemptionsPerVehicle: rules.maxRedemptionsPerVehicle,
+    maxRedemptionsPerPlate: rules.maxRedemptionsPerPlate,
+    allowedWeekdaysJson: JSON.stringify(rules.allowedWeekdays),
+    allowedStartTime: rules.allowedStartTime ?? null,
+    allowedEndTime: rules.allowedEndTime ?? null,
+    timezone: rules.timezone,
+    audienceJson: rules.audience ? JSON.stringify(rules.audience) : null,
+    radiusMeters: rules.radiusMeters,
+    latitude: rules.latitude ?? null,
+    longitude: rules.longitude ?? null,
+    financialLimit: rules.financialLimit ?? null,
+    financialUsed: rules.financialUsed ?? 0,
+    maxRedemptions: rules.maxRedemptions,
+    newCustomerOnly: rules.newCustomerOnly ? 1 : 0,
+    validationMode: rules.validationMode,
+    stackingPolicy: rules.stackingPolicy,
+  });
+}
+
 export async function createCoupon(input: CouponInput) {
   const db = await requireDb();
-  const result = await db.insert(coupons).values(input);
-  return getCouponById(Number(result[0].insertId));
+  const { rules, participatingStoreIds, ...couponData } = input;
+  return db.transaction(async tx => {
+    const result = await tx.insert(coupons).values(couponData);
+    const couponId = Number(result[0].insertId);
+    if (rules) await persistCouponRule(tx, couponId, rules);
+    if (participatingStoreIds?.length) await tx.insert(couponParticipatingStores).values(participatingStoreIds.map(storeId => ({ couponId, storeId })));
+    const created = await tx.select().from(coupons).where(eq(coupons.id, couponId)).limit(1);
+    return created[0];
+  });
 }
 
 export async function updateCoupon(id: number, input: CouponInput) {
   const db = await requireDb();
-  await db.update(coupons).set(input).where(eq(coupons.id, id));
-  return getCouponById(id);
+  const { rules, participatingStoreIds, ...couponData } = input;
+  return db.transaction(async tx => {
+    await tx.update(coupons).set(couponData).where(eq(coupons.id, id));
+    if (rules) {
+      await tx.delete(couponRules).where(eq(couponRules.couponId, id));
+      await persistCouponRule(tx, id, rules);
+    }
+    if (participatingStoreIds) {
+      await tx.delete(couponParticipatingStores).where(eq(couponParticipatingStores.couponId, id));
+      if (participatingStoreIds.length) await tx.insert(couponParticipatingStores).values(participatingStoreIds.map(storeId => ({ couponId: id, storeId })));
+    }
+    const updated = await tx.select().from(coupons).where(eq(coupons.id, id)).limit(1);
+    return updated[0];
+  });
+}
+
+export async function getCouponRulesByCouponId(couponId: number) {
+  const db = await requireDb();
+  const result = await db.select().from(couponRules).where(eq(couponRules.couponId, couponId)).limit(1);
+  return result[0] ?? null;
+}
+
+export async function listCouponParticipatingStoreIds(couponId: number) {
+  const db = await requireDb();
+  const rows = await db.select({ storeId: couponParticipatingStores.storeId }).from(couponParticipatingStores).where(eq(couponParticipatingStores.couponId, couponId));
+  return rows.map(row => row.storeId);
 }
 
 export async function updateCouponStatus(

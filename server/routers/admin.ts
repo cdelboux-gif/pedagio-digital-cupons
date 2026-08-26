@@ -130,6 +130,30 @@ export const partnerInput = z
     { message: "Informe latitude e longitude juntas", path: ["latitude"] },
   );
 
+const couponRuleInput = z.object({
+  discountType: z.enum(["percentage", "fixed"]),
+  discountValue: z.number().positive().max(1_000_000),
+  minimumPurchaseAmount: z.number().min(0).max(1_000_000),
+  maxRedemptionsPerCustomer: z.number().int().min(0).max(1_000_000),
+  maxRedemptionsPerVehicle: z.number().int().min(0).max(1_000_000),
+  maxRedemptionsPerPlate: z.number().int().min(0).max(1_000_000),
+  allowedWeekdays: z.array(z.number().int().min(0).max(6)).max(7),
+  allowedStartTime: z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/).nullable().optional(),
+  allowedEndTime: z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/).nullable().optional(),
+  timezone: z.string().trim().min(1).max(64),
+  audience: z.object({ requiredSegments: z.array(z.string().trim().min(1).max(80)).max(30).optional(), excludedSegments: z.array(z.string().trim().min(1).max(80)).max(30).optional() }).nullable().optional(),
+  radiusMeters: z.number().int().min(0).max(100_000),
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
+  financialLimit: z.number().positive().max(1_000_000_000).nullable().optional(),
+  financialUsed: z.number().min(0).max(1_000_000_000).optional(),
+  maxRedemptions: z.number().int().min(0).max(1_000_000),
+  newCustomerOnly: z.boolean(),
+  validationMode: z.enum(["code", "qr", "automatic"]),
+  stackingPolicy: z.enum(["stackable", "non_stackable"]),
+}).refine(value => (value.latitude == null) === (value.longitude == null), { message: "Informe latitude e longitude juntas", path: ["latitude"] })
+  .refine(value => value.discountType !== "percentage" || value.discountValue <= 100, { message: "Percentual deve estar entre 0 e 100", path: ["discountValue"] });
+
 const couponInput = z
   .object({
     partnerId: z.number().int().positive(),
@@ -142,6 +166,8 @@ const couponInput = z
     startsAt: z.coerce.date(),
     endsAt: z.coerce.date(),
     usageLimit: z.number().int().min(0).max(1_000_000),
+    rules: couponRuleInput.optional(),
+    participatingStoreIds: z.array(z.number().int().positive()).max(500).optional(),
     itemImage: imageUpload,
   })
   .refine(value => value.endsAt > value.startsAt, {
@@ -315,6 +341,11 @@ export const adminRouter = router({
         const store = await getPartnerStoreById(input.storeId);
         if (!store || store.partnerId !== input.partnerId) throw new TRPCError({ code: "BAD_REQUEST", message: "A loja precisa pertencer ao parceiro selecionado" });
       }
+      if (input.participatingStoreIds?.some(storeId => storeId === input.storeId) === false && input.storeId) throw new TRPCError({ code: "BAD_REQUEST", message: "A loja principal precisa estar entre as lojas participantes" });
+      for (const storeId of input.participatingStoreIds ?? []) {
+        const store = await getPartnerStoreById(storeId);
+        if (!store || store.partnerId !== input.partnerId || !(await isStoreInScope(storeId, scopeOf(ctx.user), true))) throw new TRPCError({ code: "BAD_REQUEST", message: "Todas as lojas participantes devem pertencer ao parceiro e ao escopo atual" });
+      }
       const { itemImage, ...data } = input;
       const coupon = await createCoupon(data);
       if (!coupon) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar o cupom" });
@@ -335,6 +366,11 @@ export const adminRouter = router({
         if (input.data.storeId) {
           const store = await getPartnerStoreById(input.data.storeId);
           if (!store || store.partnerId !== input.data.partnerId) throw new TRPCError({ code: "BAD_REQUEST", message: "A loja precisa pertencer ao parceiro selecionado" });
+        }
+        if (input.data.participatingStoreIds?.some(storeId => storeId === input.data.storeId) === false && input.data.storeId) throw new TRPCError({ code: "BAD_REQUEST", message: "A loja principal precisa estar entre as lojas participantes" });
+        for (const storeId of input.data.participatingStoreIds ?? []) {
+          const store = await getPartnerStoreById(storeId);
+          if (!store || store.partnerId !== input.data.partnerId || !(await isStoreInScope(storeId, scopeOf(ctx.user), true))) throw new TRPCError({ code: "BAD_REQUEST", message: "Todas as lojas participantes devem pertencer ao parceiro e ao escopo atual" });
         }
         const { itemImage, ...data } = input.data;
         const before = await getCouponById(input.id);

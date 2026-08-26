@@ -277,3 +277,16 @@
 - [x] Criar matriz executiva de cobertura atual, parcial e ausente.
 - [ ] Implementar e testar as regras obrigatórias ausentes ou incompletas.
 - [ ] Validar o motor de regras no desktop/mobile e publicar checkpoint da evolução.
+
+## Continuação: endurecimento do motor de regras
+
+- [x] Modelar `couponRules` e `couponParticipatingStores` com desconto, compra mínima, limites por CPF/veículo/placa, calendário, público, geofence, orçamento, resgates, cliente novo, validação e cumulatividade.
+- [x] Aplicar a migração não destrutiva 0012 no banco MySQL/TiDB.
+- [x] Criar avaliador determinístico reutilizável com cálculo de desconto e motivos de inelegibilidade.
+- [x] Cobrir o avaliador com testes unitários para as regras comerciais e geográficas.
+- [x] Conectar criação e atualização de cupons à persistência transacional das regras e lojas participantes.
+- [x] Adicionar à tela de cupons os campos P0 de tipo/valor, compra mínima e limites individuais.
+- [ ] Conectar o avaliador ao resgate transacional com contagens por CPF, veículo e placa, lock/concurrency e atualização de orçamento.
+- [ ] Carregar e editar na interface os campos avançados de calendário, geofence, público, cliente novo, QR/automático e cumulatividade.
+- [ ] Validar a experiência autenticada em desktop/mobile e publicar o checkpoint final do endurecimento.
+

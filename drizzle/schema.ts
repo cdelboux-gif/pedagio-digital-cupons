@@ -13,6 +13,9 @@ import {
 
 export const partnerStatusValues = ["prospect", "active", "inactive", "blocked"] as const;
 export const couponStatusValues = ["draft", "active", "paused", "ended"] as const;
+export const couponDiscountTypeValues = ["percentage", "fixed"] as const;
+export const couponStackingPolicyValues = ["stackable", "non_stackable"] as const;
+export const couponValidationModeValues = ["code", "qr", "automatic"] as const;
 export const integrationEventValues = [
   "coupon.created",
   "coupon.published",
@@ -184,6 +187,51 @@ export const coupons = mysqlTable(
     index("coupons_status_idx").on(table.status),
     index("coupons_end_date_idx").on(table.endsAt),
   ],
+);
+
+export const couponRules = mysqlTable(
+  "couponRules",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    couponId: int("couponId").notNull().references(() => coupons.id, { onDelete: "cascade" }),
+    discountType: mysqlEnum("discountType", couponDiscountTypeValues).notNull(),
+    discountValue: decimal("discountValue", { precision: 12, scale: 2, mode: "number" }).notNull(),
+    minimumPurchaseAmount: decimal("minimumPurchaseAmount", { precision: 12, scale: 2, mode: "number" }).default(0).notNull(),
+    maxRedemptionsPerCustomer: int("maxRedemptionsPerCustomer").default(0).notNull(),
+    maxRedemptionsPerVehicle: int("maxRedemptionsPerVehicle").default(0).notNull(),
+    maxRedemptionsPerPlate: int("maxRedemptionsPerPlate").default(0).notNull(),
+    allowedWeekdaysJson: text("allowedWeekdaysJson"),
+    allowedStartTime: varchar("allowedStartTime", { length: 5 }),
+    allowedEndTime: varchar("allowedEndTime", { length: 5 }),
+    timezone: varchar("timezone", { length: 64 }).default("America/Sao_Paulo").notNull(),
+    audienceJson: text("audienceJson"),
+    radiusMeters: int("radiusMeters").default(0).notNull(),
+    latitude: decimal("latitude", { precision: 10, scale: 7, mode: "number" }),
+    longitude: decimal("longitude", { precision: 10, scale: 7, mode: "number" }),
+    financialLimit: decimal("financialLimit", { precision: 12, scale: 2, mode: "number" }),
+    financialUsed: decimal("financialUsed", { precision: 12, scale: 2, mode: "number" }).default(0).notNull(),
+    maxRedemptions: int("maxRedemptions").default(0).notNull(),
+    newCustomerOnly: int("newCustomerOnly").default(0).notNull(),
+    validationMode: mysqlEnum("validationMode", couponValidationModeValues).default("code").notNull(),
+    stackingPolicy: mysqlEnum("stackingPolicy", couponStackingPolicyValues).default("non_stackable").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    uniqueIndex("coupon_rules_coupon_uq").on(table.couponId),
+    index("coupon_rules_validation_idx").on(table.validationMode),
+  ],
+);
+
+export const couponParticipatingStores = mysqlTable(
+  "couponParticipatingStores",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    couponId: int("couponId").notNull().references(() => coupons.id, { onDelete: "cascade" }),
+    storeId: int("storeId").notNull().references(() => partnerStores.id, { onDelete: "restrict" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [uniqueIndex("coupon_participating_stores_uq").on(table.couponId, table.storeId), index("coupon_participating_stores_store_idx").on(table.storeId)],
 );
 
 export const partnerIntegrations = mysqlTable(
