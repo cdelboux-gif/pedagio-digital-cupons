@@ -382,3 +382,5 @@
 - [x] Definir dados do piloto: Frango Assado, cupom CAFE01 e cliente pseudonimizado user-demo-001.
 - [x] [P0] Corrigir o formulário de resgate para exigir e enviar a referência do cliente pseudonimizado.
 - [ ] [P0] Repetir o teste do CAFE01 com `user-demo-001` e confirmar a auditoria do cliente pseudonimizado.
+- [x] [P0] Melhorar a distinção visual entre referência operacional e referência do cliente no formulário de resgate, evitando novo preenchimento incorreto.
+- [ ] [P0] Repetir o piloto com a referência operacional em formato PED- e `user-demo-001` no campo de cliente, confirmando histórico e auditoria.
