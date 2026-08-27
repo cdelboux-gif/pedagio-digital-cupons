@@ -315,3 +315,9 @@
 - [x] Definir catálogo de variáveis disponíveis e interação de seleção.
 - [x] Implementar menu suspenso/autocomplete com inserção no texto do template.
 - [x] Validar teclado, responsividade, testes e publicar a melhoria.
+
+## Ajuste: preview de tela de bloqueio
+
+- [x] Definir composição visual de lock screen para iOS e Android.
+- [x] Implementar previews alternáveis usando conteúdo real da notificação.
+- [x] Validar responsividade, acessibilidade, testes e publicar a melhoria.
