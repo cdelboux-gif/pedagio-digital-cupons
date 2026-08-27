@@ -53,3 +53,9 @@ O cenário escolhido para a homologação é o **resgate normal por um cliente e
 ## Dados aprovados para o piloto
 
 Para a primeira homologação será utilizado o parceiro **Frango Assado**, o cupom **CAFE01** e o cliente pseudonimizado **user-demo-001**. O cenário é um resgate normal por cliente existente. A equipe deve confirmar o resultado no histórico antes de repetir qualquer solicitação com a mesma chave idempotente.
+
+## Resultado parcial da homologação
+
+Em 27/08/2026, o resgate do cupom **CAFE01** foi executado com sucesso no ambiente publicado e gerou a referência **ped_fa_00000004**, com status confirmado. O saldo operacional foi atualizado pelo fluxo de utilização.
+
+A homologação, entretanto, não deve ser considerada totalmente aprovada ainda: o histórico exibiu **“Cliente não identificado”**, embora o cenário aprovado previsse o cliente pseudonimizado `user-demo-001`. É necessário corrigir ou completar a captura da referência do cliente no formulário/fluxo de resgate e repetir uma utilização controlada antes do aceite final.

@@ -380,3 +380,5 @@
 - [ ] Executar homologação administrativa e publicar o checkpoint de fechamento do MVP.
 - [x] Registrar decisão do piloto: cliente existente em resgate normal; regra de cliente novo coberta separadamente.
 - [x] Definir dados do piloto: Frango Assado, cupom CAFE01 e cliente pseudonimizado user-demo-001.
+- [x] [P0] Corrigir o formulário de resgate para exigir e enviar a referência do cliente pseudonimizado.
+- [ ] [P0] Repetir o teste do CAFE01 com `user-demo-001` e confirmar a auditoria do cliente pseudonimizado.
