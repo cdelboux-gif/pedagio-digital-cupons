@@ -426,3 +426,10 @@
 - [x] Preparar checklist de implantação por ambiente, variáveis, migrações, smoke tests, aprovação e rollback em `docs/implantacao-agentes.md`.
 - [x] Preparar matriz de informações externas necessárias para homologação do app, push/polling, backup e compliance em `docs/implantacao-agentes.md`.
 - [x] Validar prontidão técnica local da implantação sem ativar integrações reais antes dos critérios de aceite; `pnpm check`, 112 testes e `git diff --check` aprovados.
+
+## Painel de governança de agentes
+
+- [x] Implementar painel visual de aprovações pendentes com filtros por agente, risco e intenção em `/agentes`.
+- [x] Exibir contexto JSON redigido, política/prompt aplicados, agente responsável e referência de idempotência para revisão humana.
+- [x] Conectar ações de aprovação e cancelamento individual ou em lote com registro de auditoria.
+- [x] Validar experiência visual, responsividade e segurança do painel de governança; TypeScript, 112 testes e desktop/mobile aprovados.
