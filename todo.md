@@ -419,3 +419,10 @@
 - [ ] Implementar coleta de feedback explícito e implícito com versionamento de prompts, políticas e modelos.
 - [ ] Criar testes de autorização, LGPD, prompt injection, alucinação, abuso, custo, latência e idempotência.
 - [x] Documentar playbooks, métricas, SLAs, matriz de responsabilidade e procedimento de incidentes dos agentes em `docs/arquitetura-agentes-plataforma.md`.
+
+## Implantação dos agentes
+
+- [x] Consolidar documento operacional com estrutura, lógica, estados, responsabilidades e fluxos dos agentes em `docs/implantacao-agentes.md`.
+- [x] Preparar checklist de implantação por ambiente, variáveis, migrações, smoke tests, aprovação e rollback em `docs/implantacao-agentes.md`.
+- [x] Preparar matriz de informações externas necessárias para homologação do app, push/polling, backup e compliance em `docs/implantacao-agentes.md`.
+- [x] Validar prontidão técnica local da implantação sem ativar integrações reais antes dos critérios de aceite; `pnpm check`, 112 testes e `git diff --check` aprovados.
