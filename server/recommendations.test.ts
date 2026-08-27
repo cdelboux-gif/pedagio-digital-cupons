@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPassageIdempotencyKey, rankRecommendationCandidates } from "./recommendations";
+import { buildPassageIdempotencyKey, buildRecommendationDecisionContext, buildRecommendationDisclosure, rankRecommendationCandidates } from "./recommendations";
 
 const now = new Date("2026-08-25T12:00:00.000Z");
 const coupon = (overrides: Record<string, unknown> = {}) => ({
@@ -47,5 +47,11 @@ describe("recommendation engine", () => {
     const key = buildPassageIdempotencyKey("user-1", 5, now);
     expect(key).toBe("toll:user-1:5:2026-08-25T12:00");
     expect(buildPassageIdempotencyKey("user-1", 5, now)).toBe(key);
+  });
+
+  it("serializes auditable consent context and sponsored disclosure deterministically", () => {
+    expect(buildRecommendationDisclosure({ mode: "sponsored", sponsorshipLabel: "Patrocinado" })).toBe('{"sponsored":true,"label":"Patrocinado"}');
+    expect(buildRecommendationDisclosure({ mode: "activated_benefit", sponsorshipLabel: null })).toBe('{"sponsored":false,"label":null}');
+    expect(buildRecommendationDecisionContext({ tollPlazaId: 5, consentPersonalization: true, score: 0.72 })).toBe('{"tollPlazaId":5,"personalizationAllowed":true,"score":0.72}');
   });
 });

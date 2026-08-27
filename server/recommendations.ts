@@ -83,3 +83,11 @@ export function rankRecommendationCandidates(candidates: Candidate[], context: R
 export function buildPassageIdempotencyKey(userReference: string, tollPlazaId: number, occurredAt: Date) {
   return `toll:${userReference}:${tollPlazaId}:${occurredAt.toISOString().slice(0, 16)}`;
 }
+
+export function buildRecommendationDisclosure(item: Pick<RankedRecommendation, "mode" | "sponsorshipLabel">) {
+  return JSON.stringify({ sponsored: item.mode === "sponsored", label: item.sponsorshipLabel });
+}
+
+export function buildRecommendationDecisionContext(input: Pick<RecommendationContext, "tollPlazaId" | "consentPersonalization"> & Pick<RankedRecommendation, "score">) {
+  return JSON.stringify({ tollPlazaId: input.tollPlazaId, personalizationAllowed: input.consentPersonalization, score: input.score });
+}

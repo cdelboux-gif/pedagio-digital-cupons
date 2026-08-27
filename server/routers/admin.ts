@@ -94,7 +94,7 @@ import { accessLevelValues, entityStatusValues, integrationEventValues, integrat
 import { moduleProcedure, router, superAdminProcedure } from "../_core/trpc";
 import { emailEventValues, validateEmailTemplate, renderEmail, renderEmailText, type EmailCondition, type EmailVariables } from "../email";
 import { recommendationModeValues, recommendationCampaignStatusValues, tollPlazaStatusValues } from "../../drizzle/schema";
-import { buildPassageIdempotencyKey, rankRecommendationCandidates } from "../recommendations";
+import { buildPassageIdempotencyKey, buildRecommendationDecisionContext, buildRecommendationDisclosure, rankRecommendationCandidates } from "../recommendations";
 
 const partnerStatus = z.enum(["prospect", "active", "inactive", "blocked"]);
 const couponStatus = z.enum(["draft", "active", "paused", "ended"]);
@@ -702,8 +702,8 @@ export const adminRouter = router({
           score: item.score,
           explanation: item.explanation,
           consentVersion: input.consentPersonalization ? "consent-v1.0" : null,
-          disclosureJson: JSON.stringify({ sponsored: item.mode === "sponsored", label: item.sponsorshipLabel }),
-          decisionContextJson: JSON.stringify({ tollPlazaId: input.tollPlazaId, personalizationAllowed: input.consentPersonalization, score: item.score }),
+          disclosureJson: buildRecommendationDisclosure(item),
+          decisionContextJson: buildRecommendationDecisionContext({ tollPlazaId: input.tollPlazaId, consentPersonalization: input.consentPersonalization, score: item.score }),
           status: "prepared",
           isSimulation: 1,
         });
