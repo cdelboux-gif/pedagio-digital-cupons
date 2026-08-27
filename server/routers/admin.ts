@@ -314,16 +314,16 @@ export const adminRouter = router({
   dashboard: moduleProcedure("dashboard", "read").query(({ ctx }) => getDashboardSummary(scopeOf(ctx.user))),
 
   agents: router({
-    list: moduleProcedure("access", "manage").query(() => listAgentProfiles()),
-    tools: moduleProcedure("access", "manage").input(z.object({ agentId: z.number().int().positive() })).query(({ input }) => listAgentTools(input.agentId)),
-    create: moduleProcedure("access", "manage").input(agentProfileInput).mutation(async ({ input, ctx }) => {
+    list: moduleProcedure("agents", "read").query(() => listAgentProfiles()),
+    tools: moduleProcedure("agents", "read").input(z.object({ agentId: z.number().int().positive() })).query(({ input }) => listAgentTools(input.agentId)),
+    create: moduleProcedure("agents", "create").input(agentProfileInput).mutation(async ({ input, ctx }) => {
       if (!scopeAllows(scopeOf(ctx.user), { entityId: input.entityId ?? null, partnerId: input.partnerId ?? null, storeId: input.storeId ?? null }, true)) throw forbiddenScope();
       const created = await createAgentProfile({ ...input, entityId: input.entityId ?? null, partnerId: input.partnerId ?? null, storeId: input.storeId ?? null, createdByUserId: ctx.user.id });
       if (!created) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar o agente" });
       await audit(ctx, { action: "create", resourceType: "agent_profile", resourceId: created.id, resourceLabel: created.name, after: created, scope: scopeOf(ctx.user) });
       return created;
     }),
-    plan: moduleProcedure("access", "manage").input(agentRunInput).mutation(async ({ input, ctx }) => {
+    plan: moduleProcedure("agents", "manage").input(agentRunInput).mutation(async ({ input, ctx }) => {
       const agent = await getAgentProfileByKey(input.agentKey);
       if (!agent || agent.status !== "active") throw notFound("Agente ativo");
       if (!scopeAllows(scopeOf(ctx.user), { entityId: agent.entityId, partnerId: agent.partnerId, storeId: agent.storeId }, false)) throw forbiddenScope();
@@ -333,7 +333,7 @@ export const adminRouter = router({
       if (run.row) await audit(ctx, { action: "create", resourceType: "agent_run", resourceId: run.row.id, resourceLabel: `${agent.name} · ${input.intent}`, after: { ...run.row, input: undefined }, scope: scopeOf(ctx.user) });
       return { ...run, route };
     }),
-    feedback: moduleProcedure("access", "manage").input(agentFeedbackInput).mutation(async ({ input, ctx }) => {
+    feedback: moduleProcedure("agents", "manage").input(agentFeedbackInput).mutation(async ({ input, ctx }) => {
       const feedback = await createAgentFeedback({ ...input, runId: input.runId ?? null, score: input.score ?? null, correctionRedacted: input.correctionRedacted ?? null, createdByUserId: ctx.user.id });
       if (feedback) await audit(ctx, { action: "create", resourceType: "agent_feedback", resourceId: feedback.id, resourceLabel: input.label, after: feedback, scope: scopeOf(ctx.user) });
       return feedback;
