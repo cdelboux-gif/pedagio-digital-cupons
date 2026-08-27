@@ -347,11 +347,11 @@
 - [ ] [P0] Revisar o modelo `consent-v1.0` com encarregado de dados ou advogado antes do uso produtivo.
 - [ ] [P1] Validar backup e restauração do banco e do storage com evidência operacional.
 - [ ] [P1] Configurar observabilidade mínima de produção para resgates, webhooks, outbox, erros e latência.
-- [ ] [P1] Documentar operação, suporte, bloqueio de parceiros, reprocessamento e resposta a incidentes.
+- [x] [P1] Documentar operação, suporte, bloqueio de parceiros, reprocessamento e resposta a incidentes; runbook consolidado em `docs/fechamento-mvp-administrativo.md`.
 
 ### MVP integrado ao app Pedágio Digital
 
-- [ ] [P0] Definir endpoint, autenticação, assinatura e ambiente de homologação para o app consumir `notification.v1` e `recommendations.v1`.
+- [x] [P0] Definir endpoint, autenticação, assinatura e ambiente de homologação para o app consumir `notification.v1` e `recommendations.v1`; especificação em `docs/integracao-app-pedagio-digital.md`.
 - [ ] [P0] Integrar o evento `toll.passed` ao app em modo assistido, com idempotência e consentimento.
 - [ ] [P1] Implementar entrega real de notificações ou polling pelo app, mantendo a entrega simulada como fallback de testes.
 - [ ] [P1] Validar cache/offline, fallback determinístico e comportamento em rede instável.
