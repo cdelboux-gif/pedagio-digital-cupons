@@ -1443,3 +1443,12 @@ export async function provisionAgentProfiles(profiles: AgentProfileInput[]) {
   }
   return created;
 }
+
+
+export async function updateAgentRunStatus(id: number, status: AgentRun["status"], approvalUserId?: number | null) {
+  const db = await requireDb();
+  const now = new Date();
+  await db.update(agentRuns).set({ status, approvalUserId: approvalUserId ?? null, completedAt: status === "completed" || status === "cancelled" || status === "failed" ? now : null, updatedAt: now }).where(eq(agentRuns.id, id));
+  const rows = await db.select().from(agentRuns).where(eq(agentRuns.id, id)).limit(1);
+  return rows[0];
+}

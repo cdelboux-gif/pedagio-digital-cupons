@@ -91,6 +91,7 @@ import {
   listAgentTools,
   createAgentRun,
   listAgentRuns,
+  updateAgentRunStatus,
   createAgentFeedback,
   enqueueNotification,
   simulateNotificationOutbox,
@@ -339,6 +340,19 @@ export const adminRouter = router({
       const run = await createAgentRun({ idempotencyKey: input.idempotencyKey, agentId: agent.id, actorUserId: ctx.user.id, requesterReference: input.requesterReference ?? null, intent: input.intent, status: route.approvalRequired ? "awaiting_approval" : input.status, riskLevel: route.risk, inputRedactedJson: JSON.stringify(redactAgentInput(input.input)), outputRedactedJson: null, approvalUserId: null, policyVersion: agent.policyVersion, promptVersion: agent.promptVersion, errorMessage: null, startedAt: null, completedAt: null });
       if (run.row) await audit(ctx, { action: "create", resourceType: "agent_run", resourceId: run.row.id, resourceLabel: `${agent.name} · ${input.intent}`, after: { ...run.row, input: undefined }, scope: scopeOf(ctx.user) });
       return { ...run, route };
+    }),
+    runs: moduleProcedure("agents", "read").input(z.object({ agentId: z.number().int().positive().optional() }).optional()).query(({ input }) => listAgentRuns(input?.agentId)),
+    approve: moduleProcedure("agents", "manage").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+      const run = await updateAgentRunStatus(input.id, "completed", ctx.user.id);
+      if (!run) throw notFound("Execução");
+      await audit(ctx, { action: "activate", resourceType: "agent_run", resourceId: run.id, resourceLabel: `${run.intent} · aprovado`, after: run, scope: scopeOf(ctx.user) });
+      return run;
+    }),
+    cancel: moduleProcedure("agents", "manage").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+      const run = await updateAgentRunStatus(input.id, "cancelled", ctx.user.id);
+      if (!run) throw notFound("Execução");
+      await audit(ctx, { action: "status_change", resourceType: "agent_run", resourceId: run.id, resourceLabel: `${run.intent} · cancelado`, after: run, scope: scopeOf(ctx.user) });
+      return run;
     }),
     feedback: moduleProcedure("agents", "manage").input(agentFeedbackInput).mutation(async ({ input, ctx }) => {
       const feedback = await createAgentFeedback({ ...input, runId: input.runId ?? null, score: input.score ?? null, correctionRedacted: input.correctionRedacted ?? null, createdByUserId: ctx.user.id });
