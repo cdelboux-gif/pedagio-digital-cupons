@@ -445,3 +445,9 @@
 - [x] Filtrar ações pendentes por tipo de agente e nível de risco.
 - [x] Ordenar ações pendentes por agente, risco e prioridade sem perder o fluxo de seleção em lote.
 - [x] Validar filtros, ordenação, contadores e responsividade do painel; TypeScript, 115 testes e desktop/mobile aprovados.
+
+## Visualização rápida das ações dos agentes
+
+- [x] Adicionar modal de detalhes completos para cada ação da fila, com dados redigidos, risco e governança aplicada.
+- [x] Permitir iniciar aprovação ou rejeição a partir do modal sem ocultar o contexto revisado; rejeição mantém justificativa obrigatória.
+- [x] Validar acessibilidade, responsividade e integridade dos dados redigidos no modal; TypeScript e 115 testes aprovados, com revisão visual desktop.
