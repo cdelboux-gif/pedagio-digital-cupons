@@ -87,6 +87,7 @@ import {
   listAgentProfiles,
   getAgentProfileByKey,
   createAgentProfile,
+  provisionAgentProfiles,
   listAgentTools,
   createAgentRun,
   listAgentRuns,
@@ -104,6 +105,7 @@ import { recommendationModeValues, recommendationCampaignStatusValues, tollPlaza
 import { buildPassageIdempotencyKey, buildRecommendationDecisionContext, buildRecommendationDisclosure, rankRecommendationCandidates } from "../recommendations";
 import { redactAgentInput } from "../agent-policy";
 import { routeAgentIntent } from "../agent-orchestrator";
+import { defaultAgentProfiles } from "../agent-catalog";
 
 const partnerStatus = z.enum(["prospect", "active", "inactive", "blocked"]);
 const couponStatus = z.enum(["draft", "active", "paused", "ended"]);
@@ -315,6 +317,11 @@ export const adminRouter = router({
 
   agents: router({
     list: moduleProcedure("agents", "read").query(() => listAgentProfiles()),
+    provisionDefaults: moduleProcedure("agents", "manage").mutation(async ({ ctx }) => {
+      const created = await provisionAgentProfiles(defaultAgentProfiles.map(profile => ({ ...profile, entityId: null, partnerId: null, storeId: null, createdByUserId: ctx.user.id })));
+      for (const agent of created) await audit(ctx, { action: "create", resourceType: "agent_profile", resourceId: agent.id, resourceLabel: agent.name, after: agent, scope: scopeOf(ctx.user) });
+      return created;
+    }),
     tools: moduleProcedure("agents", "read").input(z.object({ agentId: z.number().int().positive() })).query(({ input }) => listAgentTools(input.agentId)),
     create: moduleProcedure("agents", "create").input(agentProfileInput).mutation(async ({ input, ctx }) => {
       if (!scopeAllows(scopeOf(ctx.user), { entityId: input.entityId ?? null, partnerId: input.partnerId ?? null, storeId: input.storeId ?? null }, true)) throw forbiddenScope();

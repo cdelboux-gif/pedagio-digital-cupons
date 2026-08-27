@@ -1431,3 +1431,15 @@ export async function createAgentFeedback(input: AgentFeedbackInput) {
   const rows = await db.select().from(agentFeedback).where(eq(agentFeedback.id, Number(result[0].insertId))).limit(1);
   return rows[0];
 }
+
+
+export async function provisionAgentProfiles(profiles: AgentProfileInput[]) {
+  const created: AgentProfile[] = [];
+  for (const profile of profiles) {
+    const existing = await getAgentProfileByKey(profile.agentKey);
+    if (existing) continue;
+    const row = await createAgentProfile(profile);
+    if (row) created.push(row);
+  }
+  return created;
+}

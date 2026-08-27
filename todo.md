@@ -418,4 +418,4 @@
 - [ ] Implementar sandbox, simulação, aprovação humana e rollback para ações administrativas sensíveis.
 - [ ] Implementar coleta de feedback explícito e implícito com versionamento de prompts, políticas e modelos.
 - [ ] Criar testes de autorização, LGPD, prompt injection, alucinação, abuso, custo, latência e idempotência.
-- [ ] Documentar playbooks, métricas, SLAs, matriz de responsabilidade e procedimento de incidentes dos agentes.
+- [x] Documentar playbooks, métricas, SLAs, matriz de responsabilidade e procedimento de incidentes dos agentes em `docs/arquitetura-agentes-plataforma.md`.
