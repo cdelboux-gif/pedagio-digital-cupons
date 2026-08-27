@@ -378,3 +378,4 @@
 - [x] Documentar plano de backup/restauração e evidência necessária para aceite em `docs/fechamento-mvp-administrativo.md`.
 - [x] Definir observabilidade mínima de produção e responsáveis por incidentes em `docs/fechamento-mvp-administrativo.md`.
 - [ ] Executar homologação administrativa e publicar o checkpoint de fechamento do MVP.
+- [x] Registrar decisão do piloto: cliente existente em resgate normal; regra de cliente novo coberta separadamente.

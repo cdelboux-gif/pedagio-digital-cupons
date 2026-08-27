@@ -45,3 +45,7 @@ Entrega real de push, integração efetiva do evento `toll.passed`, cache offlin
 ## Aprovação
 
 A aprovação do MVP deve ser registrada após a execução do roteiro com o parceiro piloto, a revisão jurídica do consentimento, a confirmação de backup/restauração e a definição dos responsáveis por suporte e incidentes.
+
+## Decisão do piloto
+
+O cenário escolhido para a homologação é o **resgate normal por um cliente existente**. A regra de benefício exclusivo para cliente novo não será ativada neste caso; ela deverá permanecer coberta por teste negativo separado, sem bloquear o fluxo principal do piloto.
