@@ -1020,7 +1020,7 @@ export type AuditLogInput = {
   actorUserId?: number | null;
   actorEmail?: string | null;
   action: "create" | "update" | "status_change" | "delete" | "revoke" | "activate" | "resend" | "simulate";
-  resourceType: "access" | "login_invite" | "entity" | "partner" | "store" | "coupon" | "integration" | "email_sender" | "email_template" | "email_rule" | "email_outbox" | "notification_template" | "notification_rule" | "notification_outbox";
+  resourceType: "access" | "login_invite" | "entity" | "partner" | "store" | "coupon" | "toll_plaza" | "integration" | "email_sender" | "email_template" | "email_rule" | "email_outbox" | "notification_template" | "notification_rule" | "notification_outbox";
   resourceId?: number | null;
   resourceLabel?: string | null;
   before?: unknown;
@@ -1352,3 +1352,17 @@ export async function simulateNotificationOutbox(id: number) { const db = await 
 export async function retryNotificationOutbox(id: number) { const db = await requireDb(); await db.update(notificationOutbox).set({ status: "queued", lastError: null, availableAt: new Date() }).where(eq(notificationOutbox.id, id)); const rows = await db.select().from(notificationOutbox).where(eq(notificationOutbox.id, id)).limit(1); return rows[0]; }
 export async function listNotificationPreferences(userReference: string) { const db = await requireDb(); return db.select().from(notificationPreferences).where(eq(notificationPreferences.userReference, userReference)); }
 export async function upsertNotificationPreference(input: { userReference: string; channel: string; enabled: boolean; consentVersion?: string | null }) { const db = await requireDb(); await db.insert(notificationPreferences).values({ userReference: input.userReference, channel: input.channel, enabled: input.enabled ? 1 : 0, consentVersion: input.consentVersion ?? null }).onDuplicateKeyUpdate({ set: { enabled: input.enabled ? 1 : 0, consentVersion: input.consentVersion ?? null } }); return listNotificationPreferences(input.userReference); }
+
+export async function updateTollPlaza(id: number, input: TollPlazaInput) {
+  const db = await requireDb();
+  await db.update(tollPlazas).set(input).where(eq(tollPlazas.id, id));
+  const rows = await db.select().from(tollPlazas).where(eq(tollPlazas.id, id)).limit(1);
+  return rows[0];
+}
+
+export async function deactivateTollPlaza(id: number) {
+  const db = await requireDb();
+  await db.update(tollPlazas).set({ status: "inactive" }).where(eq(tollPlazas.id, id));
+  const rows = await db.select().from(tollPlazas).where(eq(tollPlazas.id, id)).limit(1);
+  return rows[0];
+}

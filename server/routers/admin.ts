@@ -63,6 +63,8 @@ import {
   enqueueEmailRules,
   listTollPlazas,
   createTollPlaza,
+  updateTollPlaza,
+  deactivateTollPlaza,
   listRecommendationCampaigns,
   createRecommendationCampaign,
   recordTollPassageEvent,
@@ -103,7 +105,7 @@ const storeStatus = z.enum(storeStatusValues);
 const loginInviteStatus = z.enum(["pending", "accepted", "revoked", "expired"]);
 const nullableId = z.number().int().positive().nullable().optional();
 const emailEvent = z.enum(emailEventValues);
-const auditResource = z.enum(["access", "login_invite", "entity", "partner", "store", "coupon", "integration", "email_sender", "email_template", "email_rule", "email_outbox", "notification_template", "notification_rule", "notification_outbox"]);
+const auditResource = z.enum(["access", "login_invite", "entity", "partner", "store", "coupon", "toll_plaza", "integration", "email_sender", "email_template", "email_rule", "email_outbox", "notification_template", "notification_rule", "notification_outbox"]);
 const auditAction = z.enum(["create", "update", "status_change", "delete", "revoke", "activate", "resend", "simulate"]);
 const emailCondition = z.object({ field: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_.-]*$/).max(80), operator: z.enum(["equals", "not_equals", "contains", "gt", "gte", "lt", "lte"]), value: z.union([z.string().max(240), z.number(), z.boolean()]) });
 const emailSenderInput = z.object({ name: z.string().trim().min(2).max(120), fromName: z.string().trim().min(2).max(160), fromEmail: z.string().trim().email().max(320), replyTo: z.string().trim().email().max(320).nullable().optional(), status: z.enum(["active", "inactive"]) });
@@ -222,7 +224,8 @@ const storeInput = z.object({
   addressCountry: z.string().trim().toUpperCase().max(2).nullable().optional(),
   latitude: z.number().min(-90).max(90).nullable().optional(),
   longitude: z.number().min(-180).max(180).nullable().optional(),
-}).refine(value => (value.latitude == null) === (value.longitude == null), { message: "Informe latitude e longitude juntas", path: ["latitude"] });
+}).refine(value => (value.latitude == null) === (value.longitude == null), { message: "Informe latitude e longitude juntas", path: ["latitude"] })
+  .refine(value => Boolean(value.addressStreet && value.addressNumber && value.addressNeighborhood && value.addressCity && value.addressState && value.addressPostalCode && value.latitude != null && value.longitude != null), { message: "Informe endereço completo e ponto GPS validado", path: ["addressStreet"] });
 
 const tollPlazaInput = z.object({
   code: z.string().trim().min(2).max(80).transform(value => value.toUpperCase()),
@@ -617,7 +620,23 @@ export const adminRouter = router({
     create: moduleProcedure("intelligence", "create").input(tollPlazaInput).mutation(async ({ input, ctx }) => {
       const plaza = await createTollPlaza({ ...input, highway: input.highway ?? null, direction: input.direction ?? null });
       if (!plaza) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar o pedágio" });
+      await audit(ctx, { action: "create", resourceType: "toll_plaza", resourceId: plaza.id, resourceLabel: `Ponto ${plaza.name}`, after: plaza, scope: scopeOf(ctx.user) });
       return plaza;
+    }),
+    update: moduleProcedure("intelligence", "update").input(z.object({ id: z.number().int().positive(), data: tollPlazaInput })).mutation(async ({ input, ctx }) => {
+      const before = (await listTollPlazas()).find(row => row.id === input.id);
+      if (!before) throw notFound("Ponto de gatilho");
+      const updated = await updateTollPlaza(input.id, { ...input.data, highway: input.data.highway ?? null, direction: input.data.direction ?? null });
+      if (!updated) throw notFound("Ponto de gatilho");
+      await audit(ctx, { action: "update", resourceType: "coupon", resourceId: updated.id, resourceLabel: `Ponto ${updated.name}`, before, after: updated, scope: scopeOf(ctx.user) });
+      return updated;
+    }),
+    deactivate: moduleProcedure("intelligence", "delete").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+      const before = (await listTollPlazas()).find(row => row.id === input.id);
+      if (!before) throw notFound("Ponto de gatilho");
+      const updated = await deactivateTollPlaza(input.id);
+      await audit(ctx, { action: "delete", resourceType: "coupon", resourceId: input.id, resourceLabel: `Ponto ${before.name}`, before, after: updated, scope: scopeOf(ctx.user) });
+      return updated;
     }),
   }),
 
