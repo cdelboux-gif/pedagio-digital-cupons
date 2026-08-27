@@ -410,11 +410,11 @@
 - [x] Definir níveis de autonomia, aprovações humanas, limites financeiros e ações irreversíveis; matriz A0–A4 em `docs/arquitetura-agentes-plataforma.md`.
 - [x] Modelar identidade, escopo hierárquico, ferramentas, memória redigida, trilha de auditoria e feedback dos agentes em `drizzle/schema.ts` (migração 0018).
 - [x] Criar núcleo do agente supervisor/orquestrador com roteamento por intenção, restrição por audiência, classificação de risco e políticas de segurança em `server/agent-orchestrator.ts` e `server/agent-policy.ts`.
-- [ ] Criar agente de operações do backoffice para parceiros, lojas, cupons, regras, resgates e auditoria.
-- [ ] Criar agente de relacionamento para clientes do app, com consulta de benefícios e suporte sem expor dados sensíveis.
-- [ ] Criar agente de ativação e publicação para divulgadores, com revisão de conteúdo e conformidade das ofertas.
-- [ ] Criar agente de inteligência para recomendações, explicabilidade, campanhas e análise de desempenho.
-- [ ] Criar agente de treinamento e qualidade para avaliar conversas, decisões, feedback e regressões.
+- [x] Criar perfil e ferramentas-base do agente de operações do backoffice para parceiros, lojas, cupons, regras, resgates e auditoria; catálogo em `server/agent-catalog.ts`.
+- [x] Criar perfil e ferramentas-base do agente de relacionamento para clientes do app, com escopo de consulta e suporte; catálogo em `server/agent-catalog.ts`.
+- [x] Criar perfil e ferramentas-base do agente de ativação/publicação para divulgadores, com aprovação para publicação e envio; catálogo em `server/agent-catalog.ts`.
+- [x] Criar perfil e ferramentas-base do agente de inteligência para recomendações e explicabilidade; catálogo em `server/agent-catalog.ts`.
+- [x] Criar perfil e ferramenta-base do agente de treinamento e qualidade; avaliação e regressões permanecem dependentes do módulo de feedback avançado.
 - [ ] Implementar sandbox, simulação, aprovação humana e rollback para ações administrativas sensíveis.
 - [ ] Implementar coleta de feedback explícito e implícito com versionamento de prompts, políticas e modelos.
 - [ ] Criar testes de autorização, LGPD, prompt injection, alucinação, abuso, custo, latência e idempotência.

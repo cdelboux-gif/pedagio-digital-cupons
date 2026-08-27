@@ -72,6 +72,7 @@ import type { AccessLevel } from "../shared/permissions";
 import { buildEmailIdempotencyKey, matchEmailConditions, normalizeEmailAddress, renderEmail, renderEmailText, sanitizeEmailHtml, type EmailCondition, type EmailEventName, type EmailVariables } from "./email";
 import { buildNotificationIdempotencyKey, notificationV1Schema, type NotificationV1 } from "../shared/notification-contract";
 import { evaluateCouponRules, type CouponRuleDefinition } from "./coupon-rules";
+import { defaultAgentTools } from "./agent-catalog";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -1434,12 +1435,16 @@ export async function createAgentFeedback(input: AgentFeedbackInput) {
 
 
 export async function provisionAgentProfiles(profiles: AgentProfileInput[]) {
+  const db = await requireDb();
   const created: AgentProfile[] = [];
   for (const profile of profiles) {
     const existing = await getAgentProfileByKey(profile.agentKey);
-    if (existing) continue;
-    const row = await createAgentProfile(profile);
-    if (row) created.push(row);
+    const row = existing ?? await createAgentProfile(profile);
+    if (row && !existing) created.push(row);
+    const tools = defaultAgentTools[profile.agentKey] ?? [];
+    for (const tool of tools) {
+      await db.insert(agentTools).values({ agentId: row.id, toolKey: tool.toolKey, enabled: 1, requiresApproval: tool.requiresApproval ? 1 : 0 }).onDuplicateKeyUpdate({ set: { enabled: 1, requiresApproval: tool.requiresApproval ? 1 : 0 } });
+    }
   }
   return created;
 }
