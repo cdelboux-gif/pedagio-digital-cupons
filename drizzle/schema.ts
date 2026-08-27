@@ -40,6 +40,11 @@ export const emailOutboxStatusValues = ["queued", "simulated", "failed", "cancel
 export const notificationTemplateStatusValues = ["draft", "published", "archived"] as const;
 export const notificationDeliveryModeValues = ["simulated", "app_contract", "platform"] as const;
 export const notificationOutboxStatusValues = ["queued", "simulated", "failed", "delivered", "cancelled"] as const;
+export const agentAudienceValues = ["admin", "partner", "consumer", "publisher", "internal"] as const;
+export const agentStatusValues = ["draft", "active", "paused", "retired"] as const;
+export const agentAutonomyValues = ["A0", "A1", "A2", "A3", "A4"] as const;
+export const agentRunStatusValues = ["planned", "awaiting_approval", "running", "completed", "failed", "cancelled"] as const;
+export const agentFeedbackLabelValues = ["helpful", "not_helpful", "incorrect", "unsafe", "escalated"] as const;
 
 /** Core user table backing the Manus OAuth flow. */
 export const users = mysqlTable("users", {
@@ -576,6 +581,81 @@ export const notificationOutbox = mysqlTable(
   table => [index("notification_outbox_status_idx").on(table.status, table.availableAt), index("notification_outbox_event_idx").on(table.eventName), index("notification_outbox_recipient_idx").on(table.recipientReference, table.createdAt)],
 );
 
+export const agentProfiles = mysqlTable(
+  "agentProfiles",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    agentKey: varchar("agentKey", { length: 80 }).notNull().unique(),
+    name: varchar("name", { length: 160 }).notNull(),
+    audience: mysqlEnum("audience", agentAudienceValues).notNull(),
+    status: mysqlEnum("status", agentStatusValues).default("draft").notNull(),
+    autonomy: mysqlEnum("autonomy", agentAutonomyValues).default("A0").notNull(),
+    policyVersion: varchar("policyVersion", { length: 40 }).notNull(),
+    promptVersion: varchar("promptVersion", { length: 40 }).notNull(),
+    entityId: int("entityId").references(() => entities.id, { onDelete: "set null" }),
+    partnerId: int("partnerId").references(() => partners.id, { onDelete: "set null" }),
+    storeId: int("storeId").references(() => partnerStores.id, { onDelete: "set null" }),
+    createdByUserId: int("createdByUserId").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("agent_profiles_audience_idx").on(table.audience, table.status), index("agent_profiles_scope_idx").on(table.entityId, table.partnerId, table.storeId)],
+);
+
+export const agentTools = mysqlTable(
+  "agentTools",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    agentId: int("agentId").notNull().references(() => agentProfiles.id, { onDelete: "cascade" }),
+    toolKey: varchar("toolKey", { length: 120 }).notNull(),
+    enabled: int("enabled").default(1).notNull(),
+    requiresApproval: int("requiresApproval").default(1).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [uniqueIndex("agent_tools_agent_key_uq").on(table.agentId, table.toolKey)],
+);
+
+export const agentRuns = mysqlTable(
+  "agentRuns",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    idempotencyKey: varchar("idempotencyKey", { length: 180 }).notNull().unique(),
+    agentId: int("agentId").notNull().references(() => agentProfiles.id, { onDelete: "restrict" }),
+    actorUserId: int("actorUserId").references(() => users.id, { onDelete: "set null" }),
+    requesterReference: varchar("requesterReference", { length: 160 }),
+    intent: varchar("intent", { length: 120 }).notNull(),
+    status: mysqlEnum("status", agentRunStatusValues).default("planned").notNull(),
+    riskLevel: varchar("riskLevel", { length: 20 }).notNull(),
+    inputRedactedJson: text("inputRedactedJson").notNull(),
+    outputRedactedJson: text("outputRedactedJson"),
+    approvalUserId: int("approvalUserId").references(() => users.id, { onDelete: "set null" }),
+    policyVersion: varchar("policyVersion", { length: 40 }).notNull(),
+    promptVersion: varchar("promptVersion", { length: 40 }).notNull(),
+    errorMessage: text("errorMessage"),
+    startedAt: datetime("startedAt"),
+    completedAt: datetime("completedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("agent_runs_agent_status_idx").on(table.agentId, table.status), index("agent_runs_intent_idx").on(table.intent, table.createdAt)],
+);
+
+export const agentFeedback = mysqlTable(
+  "agentFeedback",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    agentId: int("agentId").notNull().references(() => agentProfiles.id, { onDelete: "restrict" }),
+    runId: int("runId").references(() => agentRuns.id, { onDelete: "set null" }),
+    label: mysqlEnum("label", agentFeedbackLabelValues).notNull(),
+    score: int("score"),
+    correctionRedacted: text("correctionRedacted"),
+    source: varchar("source", { length: 40 }).notNull(),
+    createdByUserId: int("createdByUserId").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("agent_feedback_agent_idx").on(table.agentId, table.createdAt), index("agent_feedback_run_idx").on(table.runId)],
+);
+
 export const emailOutbox = mysqlTable(
   "emailOutbox",
   {
@@ -623,6 +703,10 @@ export type NotificationTemplate = typeof notificationTemplates.$inferSelect;
 export type NotificationRule = typeof notificationRules.$inferSelect;
 export type NotificationPreference = typeof notificationPreferences.$inferSelect;
 export type NotificationOutbox = typeof notificationOutbox.$inferSelect;
+export type AgentProfile = typeof agentProfiles.$inferSelect;
+export type AgentTool = typeof agentTools.$inferSelect;
+export type AgentRun = typeof agentRuns.$inferSelect;
+export type AgentFeedback = typeof agentFeedback.$inferSelect;
 export type TollPlaza = typeof tollPlazas.$inferSelect;
 export type RecommendationCampaign = typeof recommendationCampaigns.$inferSelect;
 export type TollPassageEvent = typeof tollPassageEvents.$inferSelect;

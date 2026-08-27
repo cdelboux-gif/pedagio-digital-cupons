@@ -403,3 +403,19 @@
 - [x] Implementar pré-visualização fiel do e-mail, suporte a imagens por URL segura e upload nativo via storage.
 - [x] Cobrir permissões, auditoria, validações, TypeScript, 100 testes e responsividade da expansão.
 - [x] [P1] Adicionar upload nativo de imagens aos blocos do editor de e-mail, persistindo a URL retornada pelo storage no HTML do template e mantendo preview seguro.
+
+## Nova expansão: agentes operacionais e de atendimento
+
+- [x] Definir arquitetura multiagente para backoffice, app consumidor e divulgadores de cupons; proposta em `docs/arquitetura-agentes-plataforma.md`.
+- [x] Definir níveis de autonomia, aprovações humanas, limites financeiros e ações irreversíveis; matriz A0–A4 em `docs/arquitetura-agentes-plataforma.md`.
+- [x] Modelar identidade, escopo hierárquico, ferramentas, memória redigida, trilha de auditoria e feedback dos agentes em `drizzle/schema.ts` (migração 0018).
+- [x] Criar núcleo do agente supervisor/orquestrador com roteamento por intenção, restrição por audiência, classificação de risco e políticas de segurança em `server/agent-orchestrator.ts` e `server/agent-policy.ts`.
+- [ ] Criar agente de operações do backoffice para parceiros, lojas, cupons, regras, resgates e auditoria.
+- [ ] Criar agente de relacionamento para clientes do app, com consulta de benefícios e suporte sem expor dados sensíveis.
+- [ ] Criar agente de ativação e publicação para divulgadores, com revisão de conteúdo e conformidade das ofertas.
+- [ ] Criar agente de inteligência para recomendações, explicabilidade, campanhas e análise de desempenho.
+- [ ] Criar agente de treinamento e qualidade para avaliar conversas, decisões, feedback e regressões.
+- [ ] Implementar sandbox, simulação, aprovação humana e rollback para ações administrativas sensíveis.
+- [ ] Implementar coleta de feedback explícito e implícito com versionamento de prompts, políticas e modelos.
+- [ ] Criar testes de autorização, LGPD, prompt injection, alucinação, abuso, custo, latência e idempotência.
+- [ ] Documentar playbooks, métricas, SLAs, matriz de responsabilidade e procedimento de incidentes dos agentes.
