@@ -10,6 +10,13 @@ function context(accessLevel: "admin" | "manager" | "operator" | "viewer", scope
 }
 
 describe("permission matrix", () => {
+  it("isolates agent management by access level", () => {
+    expect(canAccess("admin", "agents", "manage")).toBe(true);
+    expect(canAccess("manager", "agents", "manage")).toBe(true);
+    expect(canAccess("operator", "agents", "manage")).toBe(false);
+    expect(canAccess("viewer", "agents", "read")).toBe(true);
+  });
+
   it("defines CRUD boundaries by level", () => {
     expect(canAccess("admin", "access", "manage")).toBe(true);
     expect(canAccess("manager", "partners", "create")).toBe(true);
