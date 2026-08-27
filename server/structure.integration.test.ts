@@ -132,7 +132,7 @@ describe("admin structure procedures", () => {
     await caller.admin.stores.list({ partnerId: 4 });
     expect(listPartnerStores).toHaveBeenCalledWith(4, expect.objectContaining({ accessLevel: "manager", partnerId: null, storeId: null }));
 
-    await caller.admin.stores.create({ partnerId: 4, name: "Unidade Centro", code: "centro", status: "active", addressCountry: "BR", latitude: null, longitude: null });
+    await caller.admin.stores.create({ partnerId: 4, name: "Unidade Centro", code: "centro", status: "active", addressStreet: "Avenida Central", addressNumber: "100", addressNeighborhood: "Centro", addressCity: "São Paulo", addressState: "SP", addressPostalCode: "01000-000", addressCountry: "BR", latitude: -23.55052, longitude: -46.633308 });
     expect(createPartnerStore).toHaveBeenCalledWith(expect.objectContaining({ partnerId: 4, code: "CENTRO" }));
   });
 

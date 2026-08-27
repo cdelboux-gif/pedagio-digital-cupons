@@ -1366,3 +1366,9 @@ export async function deactivateTollPlaza(id: number) {
   const rows = await db.select().from(tollPlazas).where(eq(tollPlazas.id, id)).limit(1);
   return rows[0];
 }
+
+export async function uploadEmailImage(input: ImageUploadInput) {
+  const { data, mimeType, safeName } = decodeImageUpload(input);
+  const upload = await storagePut(`emails/images/${Date.now()}-${safeName}`, data, mimeType);
+  return { key: upload.key, url: upload.url };
+}

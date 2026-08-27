@@ -400,5 +400,6 @@
 - [x] Criar CRUD administrativo de praças/pontos de gatilho para ofertas na Inteligência.
 - [x] Permitir selecionar pontos de gatilho no simulador e nas recomendações da Inteligência.
 - [x] Expandir o editor de e-mail com imagem, cabeçalho, rodapé, divisor, botão e demais blocos essenciais.
-- [x] Implementar pré-visualização fiel do e-mail e suporte a imagens por URL segura; upload nativo permanece separado como evolução.
+- [x] Implementar pré-visualização fiel do e-mail, suporte a imagens por URL segura e upload nativo via storage.
 - [x] Cobrir permissões, auditoria, validações, TypeScript, 100 testes e responsividade da expansão.
+- [x] [P1] Adicionar upload nativo de imagens aos blocos do editor de e-mail, persistindo a URL retornada pelo storage no HTML do template e mantendo preview seguro.

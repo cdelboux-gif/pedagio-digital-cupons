@@ -61,6 +61,7 @@ import {
   simulateEmailOutbox,
   retryEmailOutbox,
   enqueueEmailRules,
+  uploadEmailImage,
   listTollPlazas,
   createTollPlaza,
   updateTollPlaza,
@@ -578,6 +579,7 @@ export const adminRouter = router({
         const validated = validateEmailTemplate(input);
         return { subject: renderEmailText(validated.subject, input.variables as EmailVariables), preheader: validated.preheader ? renderEmailText(validated.preheader, input.variables as EmailVariables) : null, html: renderEmail(validated.bodyHtml, input.variables as EmailVariables), text: input.bodyText ? renderEmailText(input.bodyText, input.variables as EmailVariables) : null };
       }),
+      uploadImage: moduleProcedure("emails", "manage").input(imageUpload).mutation(async ({ input }) => { if (!input) throw new TRPCError({ code: "BAD_REQUEST", message: "Selecione uma imagem" }); return uploadEmailImage(input); }),
     }),
     rules: router({
       list: moduleProcedure("emails", "read").query(() => listEmailRules()),
