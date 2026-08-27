@@ -439,3 +439,9 @@
 - [x] Exigir justificativa redigida ao rejeitar/cancelar uma ação pendente de agente; diálogo acessível com mínimo de 10 e máximo de 4.000 caracteres.
 - [x] Persistir a justificativa como feedback de correção `incorrect`, redigido e associado à execução, agente e operador aprovador.
 - [x] Exibir o estado de rejeição na trilha do painel e cobrir o contrato com testes de validação; TypeScript e 115 testes aprovados.
+
+## Filtros e ordenação da fila de agentes
+
+- [x] Filtrar ações pendentes por tipo de agente e nível de risco.
+- [x] Ordenar ações pendentes por agente, risco e prioridade sem perder o fluxo de seleção em lote.
+- [x] Validar filtros, ordenação, contadores e responsividade do painel; TypeScript, 115 testes e desktop/mobile aprovados.
