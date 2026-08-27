@@ -59,3 +59,7 @@ Para a primeira homologação será utilizado o parceiro **Frango Assado**, o cu
 Em 27/08/2026, o resgate do cupom **CAFE01** foi executado com sucesso no ambiente publicado e gerou a referência **ped_fa_00000004**, com status confirmado. O saldo operacional foi atualizado pelo fluxo de utilização.
 
 A homologação, entretanto, não deve ser considerada totalmente aprovada ainda: o histórico exibiu **“Cliente não identificado”**, embora o cenário aprovado previsse o cliente pseudonimizado `user-demo-001`. É necessário corrigir ou completar a captura da referência do cliente no formulário/fluxo de resgate e repetir uma utilização controlada antes do aceite final.
+
+## Homologação concluída
+
+A segunda tentativa do piloto foi aprovada em 27/08/2026. O registro confirmou o cupom **CAFE01** com a referência operacional **PED-2026-0005** e a referência do cliente pseudonimizado **user-demo-001**, status **Confirmado**, parceiro **Frango Assado** e aplicação a todas as lojas. O histórico passou a exibir corretamente o cliente, comprovando a separação entre identificação da transação e identificação pseudonimizada do cliente.

@@ -377,11 +377,11 @@
 - [x] Documentar procedimento operacional de resgate, duplicidade, estorno, falha de rede e suporte em `docs/fechamento-mvp-administrativo.md`.
 - [x] Documentar plano de backup/restauração e evidência necessária para aceite em `docs/fechamento-mvp-administrativo.md`.
 - [x] Definir observabilidade mínima de produção e responsáveis por incidentes em `docs/fechamento-mvp-administrativo.md`.
-- [ ] Executar homologação administrativa e publicar o checkpoint de fechamento do MVP.
+- [x] Executar homologação administrativa com parceiro piloto e publicar evidência no checklist.
 - [x] Registrar decisão do piloto: cliente existente em resgate normal; regra de cliente novo coberta separadamente.
 - [x] Definir dados do piloto: Frango Assado, cupom CAFE01 e cliente pseudonimizado user-demo-001.
 - [x] [P0] Corrigir o formulário de resgate para exigir e enviar a referência do cliente pseudonimizado.
-- [ ] [P0] Repetir o teste do CAFE01 com `user-demo-001` e confirmar a auditoria do cliente pseudonimizado.
+- [x] [P0] Repetir o teste do CAFE01 com `user-demo-001`; histórico confirmado com cliente identificado corretamente.
 - [x] [P0] Melhorar a distinção visual entre referência operacional e referência do cliente no formulário de resgate, evitando novo preenchimento incorreto.
-- [ ] [P0] Repetir o piloto com a referência operacional em formato PED- e `user-demo-001` no campo de cliente, confirmando histórico e auditoria.
+- [x] [P0] Repetir o piloto com referência operacional `PED-2026-0005` e `user-demo-001` no campo de cliente; histórico confirmado.
 - [x] [P0] Validar o formato da referência operacional (`PED-...`) no formulário, impedindo que o identificador do cliente seja usado nesse campo.
