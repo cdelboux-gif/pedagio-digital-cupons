@@ -384,3 +384,4 @@
 - [ ] [P0] Repetir o teste do CAFE01 com `user-demo-001` e confirmar a auditoria do cliente pseudonimizado.
 - [x] [P0] Melhorar a distinção visual entre referência operacional e referência do cliente no formulário de resgate, evitando novo preenchimento incorreto.
 - [ ] [P0] Repetir o piloto com a referência operacional em formato PED- e `user-demo-001` no campo de cliente, confirmando histórico e auditoria.
+- [x] [P0] Validar o formato da referência operacional (`PED-...`) no formulário, impedindo que o identificador do cliente seja usado nesse campo.
