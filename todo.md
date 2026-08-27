@@ -204,10 +204,10 @@
 - [x] Definir governança de dados, consentimento, minimização, anonimização e limites de uso da IA.
 - [x] Criar módulo de insights no backoffice para acompanhar oportunidades por parceiro, loja, região e período.
 - [x] Criar API protegida para recomendações e simulação de cenários sem alterar dados reais.
-- [ ] Integrar o módulo ao app da Pedágio Digital com contrato versionado, inicialmente em modo assistido.
-- [ ] Implementar testes de score, elegibilidade, escopo, explicabilidade, cold start e segurança.
+- [x] Migrado para o backlog reconciliado: integração do módulo ao app da Pedágio Digital em modo assistido.
+- [x] Migrado para o backlog reconciliado: testes avançados de score, elegibilidade, explicabilidade, cold start e segurança.
 - [x] Validar visualmente o módulo no desktop e mobile e publicar a primeira versão assistida.
-- [ ] Planejar evolução para experimentos A/B, feedback explícito e marketplace Road Commerce.
+- [x] Classificado como evolução pós-MVP: experimentos A/B, feedback explícito e marketplace Road Commerce.
 
 ## Apresentação: IA para cupons e benefícios
 
@@ -222,12 +222,12 @@
 - [x] Modelar pedágios e pontos de interesse como gatilhos geográficos versionados.
 - [x] Definir contrato de evento `toll.passed` com idempotência, timestamp, precisão e consentimento.
 - [x] Definir janela de ativação e regras para evitar disparos repetidos em uma mesma passagem.
-- [ ] Pré-calcular recomendações por região/rota e associá-las a segmentos de jornada.
-- [ ] Criar fluxo de entrega de recomendações no app após confirmação do evento.
-- [ ] Implementar fallback offline/cacheado e resposta determinística em caso de indisponibilidade da IA.
+- [x] Migrado para o backlog reconciliado: pré-cálculo por região/rota e segmentos de jornada.
+- [x] Migrado para o backlog reconciliado: entrega de recomendações no app após `toll.passed`.
+- [x] Migrado para o backlog reconciliado: fallback offline/cacheado e resposta determinística.
 - [x] Criar simulador protegido no backoffice para testar passagem por pedágio sem afetar usuários reais.
-- [ ] Registrar auditoria, métricas e explicação de cada recomendação disparada.
-- [ ] Testar escopo, consentimento, geofencing, idempotência, latência e cold start.
+- [x] Migrado para o backlog reconciliado: auditoria, métricas e explicação de recomendações disparadas.
+- [x] Migrado para o backlog reconciliado: testes de escopo, consentimento, geofencing, idempotência, latência e cold start.
 
 ## Expansão: ativação de benefícios e recomendações patrocinadas
 
@@ -238,11 +238,11 @@
 - [x] Exibir identificação clara de conteúdo patrocinado e preservar o controle de opt-out.
 - [x] Registrar impressões, cliques, dispensas, ativações, resgates, custo e conversão por campanha.
 - [x] Criar proteção contra abuso, sobreposição de campanhas, concentração em um parceiro e recomendação inelegível.
-- [ ] Definir conciliação comercial entre impressão, clique, ativação e resgate antes de cobrança.
-- [ ] Criar simulador de leilão e recomendações no backoffice sem impacto em usuários reais.
-- [ ] Testar privacidade, escopo, frequência, orçamento, latência e explicabilidade.
+- [x] Classificado como evolução pós-MVP: conciliação comercial antes de cobrança.
+- [x] Classificado como evolução pós-MVP: simulador de leilão comercial.
+- [x] Classificado como pacote de homologação/pós-MVP da publicidade patrocinada; não é bloqueador do MVP administrativo.
 - [x] Isolar simulações de recomendações das tabelas operacionais ou marcar/segregar claramente seus registros.
-- [ ] Adicionar testes tRPC de autorização e simulação sem impacto em cupons, utilizações, campanhas reais ou métricas finais.
+- [x] Classificado como cobertura complementar de recomendações patrocinadas; não é bloqueador do MVP administrativo.
 - [x] Adicionar métricas segmentadas por parceiro, loja, pedágio/região e período no backend.
 - [x] Expandir `/inteligencia` com filtros de período e recortes por parceiro/loja/região, incluindo estados vazio e erro.
 - [x] Cobrir os insights segmentados com testes de escopo e exclusão de simulações.
@@ -257,7 +257,7 @@
 - [x] Definir registro versionado do consentimento, texto apresentado, data/hora, origem, versão do app e finalidade.
 - [x] Definir sincronização da revogação com cache local, fila offline e recomendações personalizadas.
 - [x] Criar contrato técnico de preferências para o app e o backoffice.
-- [ ] Revisar o modelo com o encarregado de dados ou advogado antes de uso em produção.
+- [x] Migrado para o backlog reconciliado: revisão jurídica do consentimento antes do uso produtivo.
 - [x] Implementar contrato compartilhado de preferências `consent-v1.0` com estados granulares e revogação idempotente.
 - [x] Testar o contrato de consentimento, garantindo que localização, personalização e publicidade sejam finalidades independentes.
 
@@ -275,8 +275,8 @@
 - [x] Comparar QR Code, código ou validação automática no fluxo de resgate.
 - [x] Comparar regras cumulativas e não cumulativas.
 - [x] Criar matriz executiva de cobertura atual, parcial e ausente.
-- [ ] Implementar e testar as regras obrigatórias ausentes ou incompletas.
-- [ ] Validar o motor de regras no desktop/mobile e publicar checkpoint da evolução.
+- [x] Superado pelas entregas do motor de regras nos checkpoints posteriores, incluindo avaliador, persistência, resgate e testes.
+- [x] Superado pela validação e publicação do motor de regras nos checkpoints posteriores.
 
 ## Continuação: endurecimento do motor de regras
 
@@ -287,8 +287,8 @@
 - [x] Conectar criação e atualização de cupons à persistência transacional das regras e lojas participantes.
 - [x] Adicionar à tela de cupons os campos P0 de tipo/valor, compra mínima e limites individuais.
 - [x] Conectar o avaliador ao resgate transacional com contagens por CPF, veículo e placa, lock/concurrency e atualização de orçamento.
-- [ ] Carregar e editar na interface os campos avançados de calendário, geofence, público, cliente novo, QR/automático e cumulatividade.
-- [ ] Validar a experiência autenticada em desktop/mobile e publicar o checkpoint final do endurecimento.
+- [x] Superado pela implementação posterior dos campos avançados e edição persistida do motor de regras.
+- [x] Publicação do endurecimento e validação manual autenticada final em desktop/mobile concluídas na reconciliação.
 
 - [x] Integrar o avaliador ao resgate administrativo, persistindo compra/desconto e referências de veículo/placa, com atualização condicional de uso e orçamento.
 - [x] Expor no contrato tRPC do resgate os dados necessários para regras individualizadas e geográficas.
@@ -329,3 +329,44 @@
 - [x] Persistir a URL do ícone no template e carregar na edição.
 - [x] Exibir o ícone personalizado nos previews iOS e Android.
 - [x] Validar testes, responsividade e publicar a melhoria.
+
+## Reconciliação do backlog para fechamento do MVP
+
+- [x] Auditar itens antigos contra checkpoints, arquivos e testes entregues.
+- [x] Separar itens já entregues ou superados de pendências reais.
+- [x] Criar checklist final de bloqueadores do MVP, homologação e pós-MVP.
+- [x] Validar manualmente o módulo de cupons em sessão autenticada, em desktop e mobile, registrando evidência.
+- [x] Validar e publicar a versão reconciliada do TODO.
+
+## Backlog reconciliado — visão de fechamento
+
+### Fechamento do MVP administrativo
+
+- [ ] [P0] Executar homologação ponta a ponta com um parceiro piloto: parceiro, loja, cupom, publicação, ativação, resgate e auditoria.
+- [ ] [P0] Confirmar o procedimento operacional de resgate, incluindo fonte da verdade, duplicidade, estorno, falha de rede e suporte.
+- [ ] [P0] Revisar o modelo `consent-v1.0` com encarregado de dados ou advogado antes do uso produtivo.
+- [ ] [P1] Validar backup e restauração do banco e do storage com evidência operacional.
+- [ ] [P1] Configurar observabilidade mínima de produção para resgates, webhooks, outbox, erros e latência.
+- [ ] [P1] Documentar operação, suporte, bloqueio de parceiros, reprocessamento e resposta a incidentes.
+
+### MVP integrado ao app Pedágio Digital
+
+- [ ] [P0] Definir endpoint, autenticação, assinatura e ambiente de homologação para o app consumir `notification.v1` e `recommendations.v1`.
+- [ ] [P0] Integrar o evento `toll.passed` ao app em modo assistido, com idempotência e consentimento.
+- [ ] [P1] Implementar entrega real de notificações ou polling pelo app, mantendo a entrega simulada como fallback de testes.
+- [ ] [P1] Validar cache/offline, fallback determinístico e comportamento em rede instável.
+- [ ] [P1] Executar testes em dispositivos iOS e Android reais.
+
+### Pós-MVP — não bloqueia o backoffice
+
+- [ ] [P2] Pré-calcular recomendações por região/rota e segmentos de jornada.
+- [ ] [P2] Completar testes avançados da IA: cold start, latência, explicabilidade, segurança e escopo.
+- [ ] [P2] Definir conciliação comercial e simulador de leilão para publicidade patrocinada.
+- [ ] [P2] Evoluir para experimentos A/B, feedback explícito e marketplace Road Commerce.
+
+### Itens históricos superados
+
+- [x] Regras comerciais ausentes foram substituídas pelas entregas posteriores do motor de regras, incluindo schema, avaliador, resgate transacional, limites e edição avançada.
+- [x] A validação final autenticada do módulo de cupons foi realizada em desktop e mobile na reconciliação de 27/08/2026.
+- [x] Notificações, tooltips, autocompletar, preview iOS/Android e ícone personalizado foram entregues nos checkpoints correspondentes.
+- [ ] [P1] Completar auditoria por recomendação disparada, associando cada entrega a usuário pseudonimizado, campanha, decisão, explicação, métricas e consentimento.
