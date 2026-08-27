@@ -63,3 +63,42 @@ A homologação, entretanto, não deve ser considerada totalmente aprovada ainda
 ## Homologação concluída
 
 A segunda tentativa do piloto foi aprovada em 27/08/2026. O registro confirmou o cupom **CAFE01** com a referência operacional **PED-2026-0005** e a referência do cliente pseudonimizado **user-demo-001**, status **Confirmado**, parceiro **Frango Assado** e aplicação a todas as lojas. O histórico passou a exibir corretamente o cliente, comprovando a separação entre identificação da transação e identificação pseudonimizada do cliente.
+
+
+## Procedimento detalhado de backup do MVP
+
+O responsável técnico deve confirmar que o banco possui backup automático em uma periodicidade definida pela operação, que o storage de imagens mantém versionamento ou mecanismo equivalente e que o acesso aos backups está restrito a administradores autorizados. A evidência mínima deve registrar data e hora, sistema de origem, identificador do backup, período de retenção, responsável e resultado da verificação de integridade. Credenciais, tokens e dados pessoais não devem ser anexados ao checklist.
+
+O aceite documental ocorre quando periodicidade, retenção, acesso e responsável estão definidos. O aceite operacional somente ocorre depois de uma restauração controlada em ambiente isolado, com conferência das tabelas de parceiros, cupons, regras, utilizações, auditoria, templates e referências de arquivos do storage.
+
+## Procedimento detalhado de restauração
+
+A restauração deve ser executada em ambiente isolado, nunca diretamente sobre a base produtiva. O operador deve identificar o ponto de restauração, restaurar o banco e verificar conectividade, contagem estrutural das tabelas, integridade das relações, leitura de um cupom ativo, leitura do histórico de utilização e disponibilidade de uma imagem armazenada. Em seguida, deve testar login administrativo, consulta de auditoria e leitura de templates sem enviar mensagens externas.
+
+O teste é aprovado quando os dados essenciais podem ser lidos, as relações permanecem íntegras, o storage responde e não há envio ou mutação involuntária na produção. O resultado deve informar ponto restaurado, ambiente, horário de início e fim, responsável, verificações executadas e qualquer divergência. Se houver divergência, o incidente deve ser aberto e o aceite fica bloqueado até a análise.
+
+## Observabilidade mínima e matriz de severidade
+
+| Sinal | Indicador operacional | Severidade inicial | Ação |
+|---|---|---:|---|
+| Falha de autenticação | Aumento de erros de login ou callback OAuth | P1 | Verificar provedor, sessão e acesso administrativo |
+| Resgate rejeitado | Crescimento de recusas por regra, validade ou duplicidade | P1 | Conferir campanha, regras e tentativa operacional |
+| Resgate confirmado | Registro, saldo, orçamento e auditoria coerentes | P0 de negócio | Conferência amostral e reconciliação |
+| Outbox parado | Itens pendentes além do prazo operacional | P1 | Reprocessar após validar idempotência |
+| Webhook falho | Falhas 4xx/5xx ou replay | P1 | Verificar assinatura, endpoint e contrato |
+| Latência crítica | Rotas de resgate e listagem fora do limite definido | P1 | Inspecionar banco, locks e dependências |
+| Exposição de dado sensível | Token, segredo ou identificador em claro em log | P0 de segurança | Bloquear fluxo, preservar evidência e acionar responsável |
+
+Os responsáveis devem definir o canal de alerta, o horário de cobertura, o prazo de resposta e o substituto. O sistema deve registrar correlação da solicitação, rota, resultado, duração, ator e escopo sem armazenar segredos ou dados pessoais desnecessários.
+
+## Runbook de operação e incidentes
+
+Em um incidente de resgate, o operador deve primeiro consultar a referência idempotente e o histórico antes de repetir a solicitação. Em suspeita de duplicidade, deve preservar o registro original, bloquear novas tentativas do cupom se necessário e encaminhar a ocorrência ao responsável. Estorno ou correção deve ser executado por procedimento auditado, nunca por edição direta do histórico.
+
+Em incidente de parceiro, o gestor pode pausar o cupom ou restringir a loja conforme seu escopo. Em falha de outbox, deve-se verificar o status, a última tentativa e a chave idempotente antes de reprocessar. Em falha de webhook, deve-se validar assinatura, timestamp, resposta HTTP e possibilidade de retry sem duplicidade. Em incidente de segurança, o acesso deve ser restringido, os segredos potencialmente comprometidos devem ser rotacionados e a revisão jurídica/de privacidade deve ser acionada.
+
+Cada incidente deve possuir identificador, início, responsável, impacto, evidências, ações, decisão de comunicação, resolução e lição aprendida. O encerramento exige confirmar que o fluxo voltou ao comportamento esperado e que o TODO foi atualizado com qualquer ação corretiva.
+
+## Dependências externas para aceite final
+
+A documentação e os testes automatizados podem ser concluídos no projeto. Permanecem dependentes de infraestrutura e operação real: confirmar a periodicidade efetiva do backup, executar restauração isolada, configurar alertas de produção, definir responsáveis e executar o teste de cobertura operacional. Essas atividades não devem ser marcadas como concluídas apenas por existência de documentação.

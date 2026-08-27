@@ -385,3 +385,11 @@
 - [x] [P0] Melhorar a distinção visual entre referência operacional e referência do cliente no formulário de resgate, evitando novo preenchimento incorreto.
 - [x] [P0] Repetir o piloto com referência operacional `PED-2026-0005` e `user-demo-001` no campo de cliente; histórico confirmado.
 - [x] [P0] Validar o formato da referência operacional (`PED-...`) no formulário, impedindo que o identificador do cliente seja usado nesse campo.
+
+## Documentação operacional complementar do MVP
+
+- [x] Detalhar procedimento de backup do banco e do storage, incluindo periodicidade, responsável, retenção e evidência.
+- [x] Detalhar procedimento de restauração e teste controlado, incluindo critérios de sucesso e rollback.
+- [x] Detalhar painel mínimo de observabilidade, alertas, severidades e responsáveis.
+- [x] Detalhar runbook de incidentes, suporte, bloqueio de parceiro e reprocessamento de outbox.
+- [x] Marcar como dependência externa a execução de infraestrutura e fechar o checklist documental.
