@@ -505,6 +505,7 @@ export const notificationTemplates = mysqlTable(
     body: varchar("body", { length: 500 }).notNull(),
     expandedBody: text("expandedBody"),
     imageUrl: varchar("imageUrl", { length: 700 }),
+    iconUrl: varchar("iconUrl", { length: 700 }),
     ctaLabel: varchar("ctaLabel", { length: 60 }),
     deepLink: varchar("deepLink", { length: 500 }),
     allowedVariablesJson: text("allowedVariablesJson").notNull(),

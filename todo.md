@@ -321,3 +321,11 @@
 - [x] Definir composição visual de lock screen para iOS e Android.
 - [x] Implementar previews alternáveis usando conteúdo real da notificação.
 - [x] Validar responsividade, acessibilidade, testes e publicar a melhoria.
+
+## Ajuste: ícone personalizado no preview
+
+- [x] Revisar o fluxo seguro de upload e armazenamento de imagens do projeto.
+- [x] Adicionar upload com validação de formato e tamanho no editor de notificações.
+- [x] Persistir a URL do ícone no template e carregar na edição.
+- [x] Exibir o ícone personalizado nos previews iOS e Android.
+- [x] Validar testes, responsividade e publicar a melhoria.

@@ -76,6 +76,7 @@ import {
   getNotificationTemplateById,
   createNotificationTemplate,
   updateNotificationTemplate,
+  uploadNotificationIcon,
   listNotificationRules,
   createNotificationRule,
   updateNotificationRule,
@@ -109,12 +110,12 @@ const emailSenderInput = z.object({ name: z.string().trim().min(2).max(120), fro
 const emailTemplateInput = z.object({ templateKey: z.string().trim().regex(/^[a-z0-9_.-]+$/).max(100), name: z.string().trim().min(2).max(160), status: z.enum(["draft", "published", "archived"]), version: z.number().int().positive().max(9999), senderId: nullableId, subject: z.string().trim().min(1).max(240), preheader: z.string().trim().max(240).nullable().optional(), bodyHtml: z.string().max(100_000), bodyText: z.string().max(100_000).nullable().optional(), allowedVariables: z.array(z.string().regex(/^[a-zA-Z][a-zA-Z0-9_.-]*$/).max(80)).max(100) });
 const emailRuleInput = z.object({ templateId: z.number().int().positive(), name: z.string().trim().min(2).max(160), eventName: emailEvent, conditions: z.array(emailCondition).max(20), enabled: z.boolean(), cooldownSeconds: z.number().int().min(0).max(2_592_000) });
 const notificationDeliveryMode = z.enum(["simulated", "app_contract", "platform"]);
-const notificationTemplateInput = z.object({ templateKey: z.string().trim().regex(/^[a-z0-9_.-]+$/).max(100), name: z.string().trim().min(2).max(160), status: z.enum(["draft", "published", "archived"]), version: z.number().int().positive().max(9999), title: z.string().trim().min(1).max(120), body: z.string().trim().min(1).max(500), expandedBody: z.string().max(4000).nullable().optional(), imageUrl: z.string().url().max(700).nullable().optional(), ctaLabel: z.string().trim().max(60).nullable().optional(), deepLink: z.string().trim().regex(/^[a-z][a-z0-9+.-]*:/i).max(500).nullable().optional(), allowedVariables: z.array(z.string().regex(/^[a-zA-Z][a-zA-Z0-9_.-]*$/).max(80)).max(100), deliveryMode: notificationDeliveryMode, locale: z.string().trim().max(12), priority: z.number().int().min(-10).max(10) });
 const notificationRuleInput = z.object({ templateId: z.number().int().positive(), name: z.string().trim().min(2).max(160), eventName: z.string().trim().min(1).max(120), conditions: z.array(emailCondition).max(20), enabled: z.boolean(), cooldownSeconds: z.number().int().min(0).max(2_592_000) });
 const imageUpload = z.object({
   fileName: z.string().trim().min(1).max(160),
   dataUrl: z.string().regex(/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/).max(7_500_000),
 }).nullable().optional();
+const notificationTemplateInput = z.object({ templateKey: z.string().trim().regex(/^[a-z0-9_.-]+$/).max(100), name: z.string().trim().min(2).max(160), status: z.enum(["draft", "published", "archived"]), version: z.number().int().positive().max(9999), title: z.string().trim().min(1).max(120), body: z.string().trim().min(1).max(500), expandedBody: z.string().max(4000).nullable().optional(), imageUrl: z.string().url().max(700).nullable().optional(), icon: imageUpload, ctaLabel: z.string().trim().max(60).nullable().optional(), deepLink: z.string().trim().regex(/^[a-z][a-z0-9+.-]*:/i).max(500).nullable().optional(), allowedVariables: z.array(z.string().regex(/^[a-zA-Z][a-zA-Z0-9_.-]*$/).max(80)).max(100), deliveryMode: notificationDeliveryMode, locale: z.string().trim().max(12), priority: z.number().int().min(-10).max(10) });
 const nullableText = (max: number) => z.string().trim().max(max).nullable().optional();
 
 export const partnerInput = z
@@ -718,16 +719,20 @@ export const adminRouter = router({
     templates: router({
       list: moduleProcedure("notifications", "read").query(() => listNotificationTemplates()),
       create: moduleProcedure("notifications", "create").input(notificationTemplateInput).mutation(async ({ input, ctx }) => {
-        const template = await createNotificationTemplate({ ...input, expandedBody: input.expandedBody ?? null, imageUrl: input.imageUrl ?? null, ctaLabel: input.ctaLabel ?? null, deepLink: input.deepLink ?? null, createdByUserId: ctx.user.id });
-        await audit(ctx, { action: "create", resourceType: "notification_template", resourceId: template?.id, resourceLabel: template?.templateKey, after: template, scope: scopeOf(ctx.user) });
-        return template;
+        const { icon, ...templateInput } = input;
+        const template = await createNotificationTemplate({ ...templateInput, expandedBody: input.expandedBody ?? null, imageUrl: input.imageUrl ?? null, iconUrl: null, ctaLabel: input.ctaLabel ?? null, deepLink: input.deepLink ?? null, createdByUserId: ctx.user.id });
+        const saved = icon && template ? await uploadNotificationIcon(template.id, icon) : template;
+        await audit(ctx, { action: "create", resourceType: "notification_template", resourceId: saved?.id, resourceLabel: saved?.templateKey, after: saved, scope: scopeOf(ctx.user) });
+        return saved;
       }),
       update: moduleProcedure("notifications", "update").input(z.object({ id: z.number().int().positive(), data: notificationTemplateInput })).mutation(async ({ input, ctx }) => {
         const before = await getNotificationTemplateById(input.id);
         if (!before) throw notFound("Template de notificação");
-        const template = await updateNotificationTemplate(input.id, { ...input.data, expandedBody: input.data.expandedBody ?? null, imageUrl: input.data.imageUrl ?? null, ctaLabel: input.data.ctaLabel ?? null, deepLink: input.data.deepLink ?? null });
-        await audit(ctx, { action: "update", resourceType: "notification_template", resourceId: input.id, resourceLabel: template?.templateKey, before, after: template, scope: scopeOf(ctx.user) });
-        return template;
+        const { icon, ...templateInput } = input.data;
+        const template = await updateNotificationTemplate(input.id, { ...templateInput, expandedBody: input.data.expandedBody ?? null, imageUrl: input.data.imageUrl ?? null, iconUrl: before.iconUrl, ctaLabel: input.data.ctaLabel ?? null, deepLink: input.data.deepLink ?? null });
+        const saved = icon ? await uploadNotificationIcon(input.id, icon) : template;
+        await audit(ctx, { action: "update", resourceType: "notification_template", resourceId: input.id, resourceLabel: saved?.templateKey, before, after: saved, scope: scopeOf(ctx.user) });
+        return saved;
       }),
     }),
     rules: router({

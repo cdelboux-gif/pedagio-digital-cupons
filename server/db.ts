@@ -1315,10 +1315,11 @@ export async function retryEmailOutbox(id: number) {
   return rows[0];
 }
 
-export type NotificationTemplateInput = Pick<NotificationTemplate, "templateKey" | "name" | "status" | "version" | "title" | "body" | "expandedBody" | "imageUrl" | "ctaLabel" | "deepLink" | "deliveryMode" | "locale" | "priority"> & { allowedVariables: string[]; createdByUserId: number };
+export type NotificationTemplateInput = Pick<NotificationTemplate, "templateKey" | "name" | "status" | "version" | "title" | "body" | "expandedBody" | "imageUrl" | "iconUrl" | "ctaLabel" | "deepLink" | "deliveryMode" | "locale" | "priority"> & { allowedVariables: string[]; createdByUserId: number };
 export async function listNotificationTemplates() { const db = await requireDb(); return db.select().from(notificationTemplates).orderBy(desc(notificationTemplates.updatedAt)); }
 export async function getNotificationTemplateById(id: number) { const db = await requireDb(); const rows = await db.select().from(notificationTemplates).where(eq(notificationTemplates.id, id)).limit(1); return rows[0]; }
 export async function createNotificationTemplate(input: NotificationTemplateInput) { const db = await requireDb(); const result = await db.insert(notificationTemplates).values({ ...input, allowedVariablesJson: JSON.stringify(input.allowedVariables) }); return getNotificationTemplateById(Number(result[0].insertId)); }
+export async function uploadNotificationIcon(id: number, input: ImageUploadInput) { const db = await requireDb(); const { data, mimeType, safeName } = decodeImageUpload(input); const upload = await storagePut(`notifications/${id}/icon/${safeName}`, data, mimeType); await db.update(notificationTemplates).set({ iconUrl: upload.url }).where(eq(notificationTemplates.id, id)); return getNotificationTemplateById(id); }
 export async function updateNotificationTemplate(id: number, input: Omit<NotificationTemplateInput, "createdByUserId">) { const db = await requireDb(); await db.update(notificationTemplates).set({ ...input, allowedVariablesJson: JSON.stringify(input.allowedVariables) }).where(eq(notificationTemplates.id, id)); return getNotificationTemplateById(id); }
 
 export type NotificationRuleInput = Pick<NotificationRule, "templateId" | "name" | "eventName" | "enabled" | "cooldownSeconds"> & { conditions: EmailCondition[]; createdByUserId: number };

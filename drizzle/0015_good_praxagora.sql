@@ -1,0 +1,1 @@
+ALTER TABLE `notificationTemplates` ADD `iconUrl` varchar(700);
