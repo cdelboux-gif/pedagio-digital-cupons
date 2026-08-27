@@ -369,7 +369,7 @@
 - [x] Regras comerciais ausentes foram substituídas pelas entregas posteriores do motor de regras, incluindo schema, avaliador, resgate transacional, limites e edição avançada.
 - [x] A validação final autenticada do módulo de cupons foi realizada em desktop e mobile na reconciliação de 27/08/2026.
 - [x] Notificações, tooltips, autocompletar, preview iOS/Android e ícone personalizado foram entregues nos checkpoints correspondentes.
-- [ ] [P1] Completar auditoria por recomendação disparada, associando cada entrega a usuário pseudonimizado, campanha, decisão, explicação, métricas e consentimento.
+- [x] [P1] Completar auditoria por recomendação disparada, associando cada entrega a usuário pseudonimizado, campanha, decisão, explicação, métricas e consentimento.
 
 ## Prioridade atual: fechamento do MVP administrativo
 

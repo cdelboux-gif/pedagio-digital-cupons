@@ -701,6 +701,9 @@ export const adminRouter = router({
           mode: item.mode,
           score: item.score,
           explanation: item.explanation,
+          consentVersion: input.consentPersonalization ? "consent-v1.0" : null,
+          disclosureJson: JSON.stringify({ sponsored: item.mode === "sponsored", label: item.sponsorshipLabel }),
+          decisionContextJson: JSON.stringify({ tollPlazaId: input.tollPlazaId, personalizationAllowed: input.consentPersonalization, score: item.score }),
           status: "prepared",
           isSimulation: 1,
         });

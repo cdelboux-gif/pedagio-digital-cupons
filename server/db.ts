@@ -1264,7 +1264,7 @@ export async function listPreparedRecommendationDeliveries(userReference: string
   return db.select().from(recommendationDeliveries).where(and(eq(recommendationDeliveries.userReference, userReference), eq(recommendationDeliveries.passageEventId, passageEventId), eq(recommendationDeliveries.isSimulation, 1))).orderBy(desc(recommendationDeliveries.score));
 }
 
-export async function createRecommendationDelivery(input: Pick<RecommendationDelivery, "idempotencyKey" | "passageEventId" | "campaignId" | "couponId" | "userReference" | "mode" | "score" | "explanation" | "status" | "isSimulation">) {
+export async function createRecommendationDelivery(input: Omit<Pick<RecommendationDelivery, "idempotencyKey" | "passageEventId" | "campaignId" | "couponId" | "userReference" | "mode" | "score" | "explanation" | "status" | "isSimulation">, never> & Partial<Pick<RecommendationDelivery, "consentVersion" | "disclosureJson" | "decisionContextJson">> & Pick<RecommendationDelivery, "idempotencyKey" | "passageEventId" | "campaignId" | "couponId" | "userReference" | "mode" | "score" | "explanation" | "status" | "isSimulation">) {
   const db = await requireDb();
   try {
     const result = await db.insert(recommendationDeliveries).values(input);
