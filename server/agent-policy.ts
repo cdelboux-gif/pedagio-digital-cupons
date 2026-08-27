@@ -62,6 +62,15 @@ export function redactAgentInput(value: unknown): unknown {
   return Object.fromEntries(Object.entries(value).map(([key, nested]) => [key, sensitiveKey.test(key) ? "[REDACTED]" : redactAgentInput(nested)]));
 }
 
+const untrustedInstructionPattern = /(ignore\s+(all|previous|prior)\s+instructions|system\s*prompt|reveal\s+(the\s+)?secret|disable\s+safety|bypass\s+policy)/i;
+
+export function containsUntrustedInstruction(value: unknown): boolean {
+  if (typeof value === "string") return untrustedInstructionPattern.test(value);
+  if (Array.isArray(value)) return value.some(containsUntrustedInstruction);
+  if (!value || typeof value !== "object") return false;
+  return Object.entries(value).some(([key, nested]) => untrustedInstructionPattern.test(key) || containsUntrustedInstruction(nested));
+}
+
 export function isHighRiskTool(toolKey: AgentToolKey) {
   return highRisk.has(riskForTool(toolKey));
 }
