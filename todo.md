@@ -342,8 +342,8 @@
 
 ### Fechamento do MVP administrativo
 
-- [ ] [P0] Executar homologação ponta a ponta com um parceiro piloto: parceiro, loja, cupom, publicação, ativação, resgate e auditoria.
-- [ ] [P0] Confirmar o procedimento operacional de resgate, incluindo fonte da verdade, duplicidade, estorno, falha de rede e suporte.
+- [x] [P0] Executar homologação ponta a ponta com um parceiro piloto: parceiro, loja, cupom, publicação, ativação, resgate e auditoria; evidência registrada para Frango Assado/CAFE01.
+- [x] [P0] Confirmar o procedimento operacional de resgate, incluindo fonte da verdade, duplicidade, estorno, falha de rede e suporte; procedimento consolidado no runbook.
 - [ ] [P0] Revisar o modelo `consent-v1.0` com encarregado de dados ou advogado antes do uso produtivo.
 - [ ] [P1] Validar backup e restauração do banco e do storage com evidência operacional.
 - [ ] [P1] Configurar observabilidade mínima de produção para resgates, webhooks, outbox, erros e latência.
