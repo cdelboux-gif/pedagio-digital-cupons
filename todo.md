@@ -451,3 +451,9 @@
 - [x] Adicionar modal de detalhes completos para cada ação da fila, com dados redigidos, risco e governança aplicada.
 - [x] Permitir iniciar aprovação ou rejeição a partir do modal sem ocultar o contexto revisado; rejeição mantém justificativa obrigatória.
 - [x] Validar acessibilidade, responsividade e integridade dos dados redigidos no modal; TypeScript e 115 testes aprovados, com revisão visual desktop.
+
+## Indicadores visuais de risco no modal
+
+- [x] Destacar visualmente baixo, médio, alto e crítico no modal de detalhes com faixa cromática e ponto de risco.
+- [x] Manter texto explícito e informação acessível além da cor, usando `role=status` e rótulo textual do nível.
+- [x] Validar contraste, responsividade e preservação das ações de aprovação/rejeição; TypeScript, 115 testes e captura mobile aprovados.
