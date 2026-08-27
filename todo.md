@@ -379,3 +379,4 @@
 - [x] Definir observabilidade mínima de produção e responsáveis por incidentes em `docs/fechamento-mvp-administrativo.md`.
 - [ ] Executar homologação administrativa e publicar o checkpoint de fechamento do MVP.
 - [x] Registrar decisão do piloto: cliente existente em resgate normal; regra de cliente novo coberta separadamente.
+- [x] Definir dados do piloto: Frango Assado, cupom CAFE01 e cliente pseudonimizado user-demo-001.

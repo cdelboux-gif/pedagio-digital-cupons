@@ -49,3 +49,7 @@ A aprovação do MVP deve ser registrada após a execução do roteiro com o par
 ## Decisão do piloto
 
 O cenário escolhido para a homologação é o **resgate normal por um cliente existente**. A regra de benefício exclusivo para cliente novo não será ativada neste caso; ela deverá permanecer coberta por teste negativo separado, sem bloquear o fluxo principal do piloto.
+
+## Dados aprovados para o piloto
+
+Para a primeira homologação será utilizado o parceiro **Frango Assado**, o cupom **CAFE01** e o cliente pseudonimizado **user-demo-001**. O cenário é um resgate normal por cliente existente. A equipe deve confirmar o resultado no histórico antes de repetir qualquer solicitação com a mesma chave idempotente.
