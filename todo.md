@@ -370,3 +370,11 @@
 - [x] A validação final autenticada do módulo de cupons foi realizada em desktop e mobile na reconciliação de 27/08/2026.
 - [x] Notificações, tooltips, autocompletar, preview iOS/Android e ícone personalizado foram entregues nos checkpoints correspondentes.
 - [ ] [P1] Completar auditoria por recomendação disparada, associando cada entrega a usuário pseudonimizado, campanha, decisão, explicação, métricas e consentimento.
+
+## Prioridade atual: fechamento do MVP administrativo
+
+- [x] Definir e documentar critérios de aceite da homologação administrativa com parceiro piloto em `docs/fechamento-mvp-administrativo.md`.
+- [x] Documentar procedimento operacional de resgate, duplicidade, estorno, falha de rede e suporte em `docs/fechamento-mvp-administrativo.md`.
+- [x] Documentar plano de backup/restauração e evidência necessária para aceite em `docs/fechamento-mvp-administrativo.md`.
+- [x] Definir observabilidade mínima de produção e responsáveis por incidentes em `docs/fechamento-mvp-administrativo.md`.
+- [ ] Executar homologação administrativa e publicar o checkpoint de fechamento do MVP.
