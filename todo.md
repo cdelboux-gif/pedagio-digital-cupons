@@ -433,3 +433,9 @@
 - [x] Exibir contexto JSON redigido, política/prompt aplicados, agente responsável e referência de idempotência para revisão humana.
 - [x] Conectar ações de aprovação e cancelamento individual ou em lote com registro de auditoria.
 - [x] Validar experiência visual, responsividade e segurança do painel de governança; TypeScript, 112 testes e desktop/mobile aprovados.
+
+## Justificativa de rejeição de ações dos agentes
+
+- [x] Exigir justificativa redigida ao rejeitar/cancelar uma ação pendente de agente; diálogo acessível com mínimo de 10 e máximo de 4.000 caracteres.
+- [x] Persistir a justificativa como feedback de correção `incorrect`, redigido e associado à execução, agente e operador aprovador.
+- [x] Exibir o estado de rejeição na trilha do painel e cobrir o contrato com testes de validação; TypeScript e 115 testes aprovados.

@@ -271,6 +271,7 @@ const recommendationInteraction = z.enum(["impression", "click", "dismiss", "act
 const agentProfileInput = z.object({ agentKey: z.string().trim().regex(/^[a-z0-9-]+$/).max(80), name: z.string().trim().min(2).max(160), audience: z.enum(agentAudienceValues), status: z.enum(agentStatusValues), autonomy: z.enum(agentAutonomyValues), policyVersion: z.string().trim().min(1).max(40), promptVersion: z.string().trim().min(1).max(40), entityId: nullableId, partnerId: nullableId, storeId: nullableId });
 const agentRunInput = z.object({ agentKey: z.string().trim().regex(/^[a-z0-9-]+$/).max(80), intent: z.string().trim().min(2).max(120), idempotencyKey: z.string().trim().min(12).max(180), riskLevel: z.enum(["low", "medium", "high", "critical"]), input: z.record(z.string(), z.unknown()), status: z.enum(agentRunStatusValues).default("planned"), requesterReference: z.string().trim().min(2).max(160).nullable().optional() });
 const agentFeedbackInput = z.object({ agentId: z.number().int().positive(), runId: z.number().int().positive().nullable().optional(), label: z.enum(agentFeedbackLabelValues), score: z.number().int().min(0).max(5).nullable().optional(), correctionRedacted: z.string().trim().max(4000).nullable().optional(), source: z.string().trim().min(2).max(40) });
+export const agentRejectionInput = z.object({ id: z.number().int().positive(), justification: z.string().trim().min(10, "Informe uma justificativa com pelo menos 10 caracteres").max(4000) });
 
 const tollPassageInput = z.object({
   userReference: z.string().trim().min(2).max(160),
@@ -348,11 +349,14 @@ export const adminRouter = router({
       await audit(ctx, { action: "activate", resourceType: "agent_run", resourceId: run.id, resourceLabel: `${run.intent} · aprovado`, after: run, scope: scopeOf(ctx.user) });
       return run;
     }),
-    cancel: moduleProcedure("agents", "manage").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+    cancel: moduleProcedure("agents", "manage").input(agentRejectionInput).mutation(async ({ input, ctx }) => {
       const run = await updateAgentRunStatus(input.id, "cancelled", ctx.user.id);
       if (!run) throw notFound("Execução");
-      await audit(ctx, { action: "status_change", resourceType: "agent_run", resourceId: run.id, resourceLabel: `${run.intent} · cancelado`, after: run, scope: scopeOf(ctx.user) });
-      return run;
+      const correctionRedacted = JSON.stringify(redactAgentInput({ rejectionJustification: input.justification }));
+      const feedback = await createAgentFeedback({ agentId: run.agentId, runId: run.id, label: "incorrect", score: 1, correctionRedacted, source: "approval_rejection", createdByUserId: ctx.user.id });
+      await audit(ctx, { action: "status_change", resourceType: "agent_run", resourceId: run.id, resourceLabel: `${run.intent} · rejeitado`, after: { ...run, rejectionFeedbackId: feedback?.id ?? null }, scope: scopeOf(ctx.user) });
+      if (feedback) await audit(ctx, { action: "create", resourceType: "agent_feedback", resourceId: feedback.id, resourceLabel: "incorrect · rejeição com justificativa", after: feedback, scope: scopeOf(ctx.user) });
+      return { ...run, rejectionFeedbackId: feedback?.id ?? null };
     }),
     feedback: moduleProcedure("agents", "manage").input(agentFeedbackInput).mutation(async ({ input, ctx }) => {
       const feedback = await createAgentFeedback({ ...input, runId: input.runId ?? null, score: input.score ?? null, correctionRedacted: input.correctionRedacted ?? null, createdByUserId: ctx.user.id });
