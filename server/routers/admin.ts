@@ -84,17 +84,26 @@ import {
   createNotificationRule,
   updateNotificationRule,
   listNotificationOutbox,
+  listAgentProfiles,
+  getAgentProfileByKey,
+  createAgentProfile,
+  listAgentTools,
+  createAgentRun,
+  listAgentRuns,
+  createAgentFeedback,
   enqueueNotification,
   simulateNotificationOutbox,
   retryNotificationOutbox,
   getCouponRulesByCouponId,
   listCouponParticipatingStoreIds,
 } from "../db";
-import { accessLevelValues, entityStatusValues, integrationEventValues, integrationStatusValues, storeStatusValues } from "../../drizzle/schema";
+import { accessLevelValues, agentAudienceValues, agentAutonomyValues, agentFeedbackLabelValues, agentRunStatusValues, agentStatusValues, entityStatusValues, integrationEventValues, integrationStatusValues, storeStatusValues } from "../../drizzle/schema";
 import { moduleProcedure, router, superAdminProcedure } from "../_core/trpc";
 import { emailEventValues, validateEmailTemplate, renderEmail, renderEmailText, type EmailCondition, type EmailVariables } from "../email";
 import { recommendationModeValues, recommendationCampaignStatusValues, tollPlazaStatusValues } from "../../drizzle/schema";
 import { buildPassageIdempotencyKey, buildRecommendationDecisionContext, buildRecommendationDisclosure, rankRecommendationCandidates } from "../recommendations";
+import { redactAgentInput } from "../agent-policy";
+import { routeAgentIntent } from "../agent-orchestrator";
 
 const partnerStatus = z.enum(["prospect", "active", "inactive", "blocked"]);
 const couponStatus = z.enum(["draft", "active", "paused", "ended"]);
@@ -106,7 +115,7 @@ const storeStatus = z.enum(storeStatusValues);
 const loginInviteStatus = z.enum(["pending", "accepted", "revoked", "expired"]);
 const nullableId = z.number().int().positive().nullable().optional();
 const emailEvent = z.enum(emailEventValues);
-const auditResource = z.enum(["access", "login_invite", "entity", "partner", "store", "coupon", "toll_plaza", "integration", "email_sender", "email_template", "email_rule", "email_outbox", "notification_template", "notification_rule", "notification_outbox"]);
+const auditResource = z.enum(["access", "login_invite", "entity", "partner", "store", "coupon", "toll_plaza", "integration", "email_sender", "email_template", "email_rule", "email_outbox", "notification_template", "notification_rule", "notification_outbox", "agent_profile", "agent_run", "agent_feedback"]);
 const auditAction = z.enum(["create", "update", "status_change", "delete", "revoke", "activate", "resend", "simulate"]);
 const emailCondition = z.object({ field: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_.-]*$/).max(80), operator: z.enum(["equals", "not_equals", "contains", "gt", "gte", "lt", "lte"]), value: z.union([z.string().max(240), z.number(), z.boolean()]) });
 const emailSenderInput = z.object({ name: z.string().trim().min(2).max(120), fromName: z.string().trim().min(2).max(160), fromEmail: z.string().trim().email().max(320), replyTo: z.string().trim().email().max(320).nullable().optional(), status: z.enum(["active", "inactive"]) });
@@ -256,6 +265,9 @@ const recommendationCampaignInput = z.object({
 }).refine(value => value.endsAt > value.startsAt, { message: "A campanha deve terminar depois de começar", path: ["endsAt"] });
 
 const recommendationInteraction = z.enum(["impression", "click", "dismiss", "activate", "redeem"] as const);
+const agentProfileInput = z.object({ agentKey: z.string().trim().regex(/^[a-z0-9-]+$/).max(80), name: z.string().trim().min(2).max(160), audience: z.enum(agentAudienceValues), status: z.enum(agentStatusValues), autonomy: z.enum(agentAutonomyValues), policyVersion: z.string().trim().min(1).max(40), promptVersion: z.string().trim().min(1).max(40), entityId: nullableId, partnerId: nullableId, storeId: nullableId });
+const agentRunInput = z.object({ agentKey: z.string().trim().regex(/^[a-z0-9-]+$/).max(80), intent: z.string().trim().min(2).max(120), idempotencyKey: z.string().trim().min(12).max(180), riskLevel: z.enum(["low", "medium", "high", "critical"]), input: z.record(z.string(), z.unknown()), status: z.enum(agentRunStatusValues).default("planned"), requesterReference: z.string().trim().min(2).max(160).nullable().optional() });
+const agentFeedbackInput = z.object({ agentId: z.number().int().positive(), runId: z.number().int().positive().nullable().optional(), label: z.enum(agentFeedbackLabelValues), score: z.number().int().min(0).max(5).nullable().optional(), correctionRedacted: z.string().trim().max(4000).nullable().optional(), source: z.string().trim().min(2).max(40) });
 
 const tollPassageInput = z.object({
   userReference: z.string().trim().min(2).max(160),
@@ -300,6 +312,33 @@ async function dispatchEmailEvent(ctx: { user: { id: number; email?: string | nu
 
 export const adminRouter = router({
   dashboard: moduleProcedure("dashboard", "read").query(({ ctx }) => getDashboardSummary(scopeOf(ctx.user))),
+
+  agents: router({
+    list: moduleProcedure("access", "manage").query(() => listAgentProfiles()),
+    tools: moduleProcedure("access", "manage").input(z.object({ agentId: z.number().int().positive() })).query(({ input }) => listAgentTools(input.agentId)),
+    create: moduleProcedure("access", "manage").input(agentProfileInput).mutation(async ({ input, ctx }) => {
+      if (!scopeAllows(scopeOf(ctx.user), { entityId: input.entityId ?? null, partnerId: input.partnerId ?? null, storeId: input.storeId ?? null }, true)) throw forbiddenScope();
+      const created = await createAgentProfile({ ...input, entityId: input.entityId ?? null, partnerId: input.partnerId ?? null, storeId: input.storeId ?? null, createdByUserId: ctx.user.id });
+      if (!created) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar o agente" });
+      await audit(ctx, { action: "create", resourceType: "agent_profile", resourceId: created.id, resourceLabel: created.name, after: created, scope: scopeOf(ctx.user) });
+      return created;
+    }),
+    plan: moduleProcedure("access", "manage").input(agentRunInput).mutation(async ({ input, ctx }) => {
+      const agent = await getAgentProfileByKey(input.agentKey);
+      if (!agent || agent.status !== "active") throw notFound("Agente ativo");
+      if (!scopeAllows(scopeOf(ctx.user), { entityId: agent.entityId, partnerId: agent.partnerId, storeId: agent.storeId }, false)) throw forbiddenScope();
+      const route = routeAgentIntent(input.intent, agent.audience, agent.autonomy);
+      if (!route.allowed) throw new TRPCError({ code: "FORBIDDEN", message: "A intenção não é permitida para este agente" });
+      const run = await createAgentRun({ idempotencyKey: input.idempotencyKey, agentId: agent.id, actorUserId: ctx.user.id, requesterReference: input.requesterReference ?? null, intent: input.intent, status: route.approvalRequired ? "awaiting_approval" : input.status, riskLevel: route.risk, inputRedactedJson: JSON.stringify(redactAgentInput(input.input)), outputRedactedJson: null, approvalUserId: null, policyVersion: agent.policyVersion, promptVersion: agent.promptVersion, errorMessage: null, startedAt: null, completedAt: null });
+      if (run.row) await audit(ctx, { action: "create", resourceType: "agent_run", resourceId: run.row.id, resourceLabel: `${agent.name} · ${input.intent}`, after: { ...run.row, input: undefined }, scope: scopeOf(ctx.user) });
+      return { ...run, route };
+    }),
+    feedback: moduleProcedure("access", "manage").input(agentFeedbackInput).mutation(async ({ input, ctx }) => {
+      const feedback = await createAgentFeedback({ ...input, runId: input.runId ?? null, score: input.score ?? null, correctionRedacted: input.correctionRedacted ?? null, createdByUserId: ctx.user.id });
+      if (feedback) await audit(ctx, { action: "create", resourceType: "agent_feedback", resourceId: feedback.id, resourceLabel: input.label, after: feedback, scope: scopeOf(ctx.user) });
+      return feedback;
+    }),
+  }),
 
   partners: router({
     list: moduleProcedure("partners", "read")

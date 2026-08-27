@@ -35,6 +35,10 @@ import {
   notificationRules,
   notificationPreferences,
   notificationOutbox,
+  agentProfiles,
+  agentTools,
+  agentRuns,
+  agentFeedback,
   tollPlazas,
   recommendationCampaigns,
   tollPassageEvents,
@@ -57,6 +61,9 @@ import {
   type NotificationTemplate,
   type NotificationRule,
   type NotificationOutbox,
+  type AgentProfile,
+  type AgentRun,
+  type AgentFeedback,
   users,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
@@ -1020,7 +1027,7 @@ export type AuditLogInput = {
   actorUserId?: number | null;
   actorEmail?: string | null;
   action: "create" | "update" | "status_change" | "delete" | "revoke" | "activate" | "resend" | "simulate";
-  resourceType: "access" | "login_invite" | "entity" | "partner" | "store" | "coupon" | "toll_plaza" | "integration" | "email_sender" | "email_template" | "email_rule" | "email_outbox" | "notification_template" | "notification_rule" | "notification_outbox";
+  resourceType: "access" | "login_invite" | "entity" | "partner" | "store" | "coupon" | "toll_plaza" | "integration" | "email_sender" | "email_template" | "email_rule" | "email_outbox" | "notification_template" | "notification_rule" | "notification_outbox" | "agent_profile" | "agent_run" | "agent_feedback";
   resourceId?: number | null;
   resourceLabel?: string | null;
   before?: unknown;
@@ -1371,4 +1378,56 @@ export async function uploadEmailImage(input: ImageUploadInput) {
   const { data, mimeType, safeName } = decodeImageUpload(input);
   const upload = await storagePut(`emails/images/${Date.now()}-${safeName}`, data, mimeType);
   return { key: upload.key, url: upload.url };
+}
+
+
+export async function listAgentProfiles() {
+  const db = await requireDb();
+  return db.select().from(agentProfiles).orderBy(agentProfiles.name);
+}
+
+export async function getAgentProfileByKey(agentKey: string) {
+  const db = await requireDb();
+  const rows = await db.select().from(agentProfiles).where(eq(agentProfiles.agentKey, agentKey)).limit(1);
+  return rows[0];
+}
+
+export type AgentProfileInput = Pick<AgentProfile, "agentKey" | "name" | "audience" | "status" | "autonomy" | "policyVersion" | "promptVersion" | "entityId" | "partnerId" | "storeId" | "createdByUserId">;
+export async function createAgentProfile(input: AgentProfileInput) {
+  const db = await requireDb();
+  const result = await db.insert(agentProfiles).values(input);
+  const rows = await db.select().from(agentProfiles).where(eq(agentProfiles.id, Number(result[0].insertId))).limit(1);
+  return rows[0];
+}
+
+export async function listAgentTools(agentId: number) {
+  const db = await requireDb();
+  return db.select().from(agentTools).where(eq(agentTools.agentId, agentId)).orderBy(agentTools.toolKey);
+}
+
+export type AgentRunInput = Pick<AgentRun, "idempotencyKey" | "agentId" | "actorUserId" | "requesterReference" | "intent" | "status" | "riskLevel" | "inputRedactedJson" | "outputRedactedJson" | "approvalUserId" | "policyVersion" | "promptVersion" | "errorMessage" | "startedAt" | "completedAt">;
+export async function createAgentRun(input: AgentRunInput) {
+  const db = await requireDb();
+  try {
+    const result = await db.insert(agentRuns).values(input);
+    const rows = await db.select().from(agentRuns).where(eq(agentRuns.id, Number(result[0].insertId))).limit(1);
+    return { created: true, row: rows[0] };
+  } catch (error) {
+    if ((error as { code?: string }).code !== "ER_DUP_ENTRY") throw error;
+    const rows = await db.select().from(agentRuns).where(eq(agentRuns.idempotencyKey, input.idempotencyKey)).limit(1);
+    return { created: false, row: rows[0] };
+  }
+}
+
+export async function listAgentRuns(agentId?: number) {
+  const db = await requireDb();
+  return db.select().from(agentRuns).where(agentId ? eq(agentRuns.agentId, agentId) : undefined).orderBy(desc(agentRuns.createdAt));
+}
+
+export type AgentFeedbackInput = Pick<AgentFeedback, "agentId" | "runId" | "label" | "score" | "correctionRedacted" | "source" | "createdByUserId">;
+export async function createAgentFeedback(input: AgentFeedbackInput) {
+  const db = await requireDb();
+  const result = await db.insert(agentFeedback).values(input);
+  const rows = await db.select().from(agentFeedback).where(eq(agentFeedback.id, Number(result[0].insertId))).limit(1);
+  return rows[0];
 }

@@ -1,0 +1,1 @@
+ALTER TABLE `auditLogs` MODIFY COLUMN `resourceType` enum('access','login_invite','entity','partner','store','coupon','toll_plaza','integration','email_sender','email_template','email_rule','email_outbox','notification_template','notification_rule','notification_outbox','agent_profile','agent_run','agent_feedback') NOT NULL;
