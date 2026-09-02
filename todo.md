@@ -457,3 +457,9 @@
 - [x] Destacar visualmente baixo, médio, alto e crítico no modal de detalhes com faixa cromática e ponto de risco.
 - [x] Manter texto explícito e informação acessível além da cor, usando `role=status` e rótulo textual do nível.
 - [x] Validar contraste, responsividade e preservação das ações de aprovação/rejeição; TypeScript, 115 testes e captura mobile aprovados.
+
+## Publicação no GitHub
+
+- [ ] Confirmar proprietário e nome do repositório GitHub de destino.
+- [ ] Verificar arquivos ignorados, segredos e artefatos antes do envio.
+- [ ] Publicar o estado atual do projeto no GitHub e validar o repositório remoto.
