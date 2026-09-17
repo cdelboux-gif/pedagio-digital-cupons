@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Activity, BellRing, Bot, Boxes, BrainCircuit, FileClock, Handshake, LayoutDashboard, LogOut, Mail, PanelLeft, ShieldCheck, Store, TicketPercent, UserCog, Webhook } from "lucide-react";
+import { Activity, BellRing, Bot, Boxes, BrainCircuit, FileClock, Handshake, LayoutDashboard, LogOut, Mail, Megaphone, PanelLeft, ShieldCheck, Store, TicketPercent, UserCog, Webhook } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -32,6 +32,7 @@ import { visibleModules, type PermissionModule } from "@shared/permissions";
 const menuItems: Array<{ icon: typeof LayoutDashboard; label: string; path: string; module: PermissionModule }> = [
   { icon: LayoutDashboard, label: "Visão geral", path: "/", module: "dashboard" },
   { icon: Handshake, label: "Parceiros", path: "/parceiros", module: "partners" },
+  { icon: Megaphone, label: "Campanhas", path: "/campanhas", module: "campaigns" },
   { icon: TicketPercent, label: "Cupons", path: "/cupons", module: "coupons" },
   { icon: Activity, label: "Utilizações", path: "/utilizacoes", module: "uses" },
   { icon: Store, label: "Lojas", path: "/lojas", module: "stores" },
