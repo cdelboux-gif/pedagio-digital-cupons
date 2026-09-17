@@ -1,5 +1,4 @@
 ALTER TABLE `partners` ADD `addressStreet` varchar(200);--> statement-breakpoint
-ALTER TABLE `partners` ADD `addressStreet` varchar(200);--> statement-breakpoint
 ALTER TABLE `partners` ADD `addressNumber` varchar(32);--> statement-breakpoint
 ALTER TABLE `partners` ADD `addressComplement` varchar(120);--> statement-breakpoint
 ALTER TABLE `partners` ADD `addressNeighborhood` varchar(120);--> statement-breakpoint
