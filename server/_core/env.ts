@@ -7,6 +7,7 @@ export const ENV = {
   localAuthEmail: process.env.LOCAL_AUTH_EMAIL ?? "",
   localAuthPasswordHash: process.env.LOCAL_AUTH_PASSWORD_HASH ?? "",
   localAuthName: process.env.LOCAL_AUTH_NAME ?? "Administrador Pedágio Digital",
+  homologationBypassAuth: process.env.HOMOLOGATION_BYPASS_AUTH === "true",
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
