@@ -20,14 +20,18 @@ import Emails from "./pages/Emails";
 import Intelligence from "./pages/Intelligence";
 import Notifications from "./pages/Notifications";
 import Agents from "./pages/Agents";
-import Login from "./pages/Login";
 
 function ProtectedRouter() {
   return <DashboardLayout><Switch><Route path="/" component={Dashboard} /><Route path="/parceiros" component={Partners} /><Route path="/campanhas" component={Campaigns} /><Route path="/cupons" component={Coupons} /><Route path="/utilizacoes" component={Uses} /><Route path="/integracoes" component={Integrations} /><Route path="/entidades" component={Entities} /><Route path="/lojas" component={Stores} /><Route path="/acessos" component={Access} /><Route path="/auditoria" component={Audit} /><Route path="/emails" component={Emails} /><Route path="/notificacoes" component={Notifications} /><Route path="/inteligencia" component={Intelligence} /><Route path="/agentes" component={Agents} /><Route component={NotFound} /></Switch></DashboardLayout>;
 }
 
+function RedirectToDashboard() {
+  window.location.replace("/");
+  return null;
+}
+
 function Router() {
-  return <Switch><Route path="/login" component={Login} /><Route path="/convite" component={Invite} /><Route component={ProtectedRouter} /></Switch>;
+  return <Switch><Route path="/login" component={RedirectToDashboard} /><Route path="/convite" component={Invite} /><Route component={ProtectedRouter} /></Switch>;
 }
 
 export default function App() {
