@@ -1,6 +1,8 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
 import { sdk } from "./sdk";
+import { ENV } from "./env";
+import * as db from "../db";
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
@@ -18,6 +20,20 @@ export async function createContext(
   } catch (error) {
     // Authentication is optional for public procedures.
     user = null;
+  }
+
+  if (!user && ENV.homologationBypassAuth) {
+    const openId = "pd_homologation_admin";
+    await db.upsertUser({
+      openId,
+      name: "Homologação Pedágio Digital",
+      email: "homologacao@pedagiodigital.com.br",
+      loginMethod: "homologation_bypass",
+      role: "admin",
+      accessLevel: "admin",
+      lastSignedIn: new Date(),
+    });
+    user = (await db.getUserByOpenId(openId)) ?? null;
   }
 
   return {
